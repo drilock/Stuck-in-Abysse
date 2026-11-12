@@ -1,0 +1,373 @@
+<title>Abyss Invaders Base Iris</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: same sonar-console look as the concept board. Part 1 = three animated docking bases, part 2 = resource / workshop / recipe chart. */
+:root {
+  --abyss: #0A1628; --rock: #1E4A66; --hull: #2F8FBF; --ore: #7CD3C8; --foam: #E3F2F0;
+  --display: "Silkscreen", "Courier New", monospace;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+body { background: var(--abyss); color: var(--foam); font-family: var(--body); line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 48px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; text-wrap: balance; letter-spacing: 0.02em; }
+h1 { font-size: clamp(28px, 6vw, 46px); line-height: 1.05; }
+h1 span { color: var(--hull); }
+h2 { font-size: 22px; }
+h3 { font-size: 16px; }
+p { margin: 0; max-width: 65ch; }
+.lede { color: var(--ore); }
+section, header { display: flex; flex-direction: column; gap: 16px; }
+.sec-head { display: flex; flex-direction: column; gap: 6px; border-top: 2px solid var(--rock); padding-top: 18px; }
+.eyebrow { font-family: var(--display); font-size: 11px; letter-spacing: 0.12em; color: var(--hull); text-transform: uppercase; }
+canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; max-width: 100%; }
+.bases { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.base { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.base canvas { width: 100%; height: auto; border: 2px solid var(--rock); }
+.tag { font-family: var(--display); font-size: 12px; color: var(--ore); }
+.base p { font-size: 14px; }
+ul.steps { margin: 0; padding-left: 18px; font-size: 14px; display: flex; flex-direction: column; gap: 2px; }
+.res { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.chip { display: flex; gap: 10px; align-items: flex-start; border: 2px solid var(--rock); padding: 10px; min-width: 0; }
+.chip canvas { width: 35px; height: 35px; flex: none; }
+.chip b { font-family: var(--display); font-weight: 400; font-size: 12px; display: block; }
+.chip span { font-size: 13px; color: var(--ore); }
+.tablewrap { overflow-x: auto; border: 2px solid var(--rock); }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rock); vertical-align: top; }
+th { font-family: var(--display); font-weight: 400; font-size: 11px; color: var(--hull); letter-spacing: 0.06em; }
+td:first-child { font-family: var(--display); font-size: 12px; white-space: nowrap; }
+.flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-family: var(--display); font-size: 12px; }
+.flow span { border: 2px solid var(--hull); padding: 4px 8px; }
+.flow i { font-style: normal; color: var(--hull); }
+.inv { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.inv > div { border: 2px solid var(--rock); padding: 14px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+footer { border-top: 2px solid var(--rock); padding-top: 18px; color: var(--ore); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Abyss Invaders · base à puits iris</div>
+    <h1>Trois habillages pour la <span>porte iris</span></h1>
+    <p class="lede">La porte reste la même : un diaphragme à six lames qui s'ouvre, des bulles qui s'échappent, puis le bathyscaphe qui s'enfonce et rapetisse en descendant avant que l'iris se referme. Seul l'habillage de la base change. Chacune montre où arrivent les ressources déposées.</p>
+  </header>
+  <section>
+    <div class="bases" id="bases"></div>
+  </section>
+  <footer><p>Dis-moi A, B ou C, ou un mélange (par exemple les dômes de A avec les poches de C).</p></footer>
+</div>
+
+<script>
+
+(() => {
+const PAL = ['#0A1628', '#1E4A66', '#2F8FBF', '#7CD3C8', '#E3F2F0'];
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+
+// ---------- the bathyscaphe (same parts as the game, level 0) ----------
+const N = 27, C = 13;
+function ell(cx, cy, rx, ry, c) { const o = []; for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) if (x >= 0 && ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1) o.push([x, y, c]); return o; }
+function range(dx, y0, y1, c) { const o = []; for (let y = y0; y <= y1; y++) o.push([dx, y, c]); return o; }
+const PARTS = [...ell(0, 17, 4.4, 6.5, 1), ...range(0, 11, 23, 2), ...ell(5.4, 17, 1.4, 3, 2), ...ell(0, 9, 4.6, 4.6, 2), ...range(4, 8, 10, 1), ...ell(0, 9, 2, 2, 3), [0, 9, 4], [0, 24, 1], [1, 16, 3], [1, 17, 3]];
+const subGrid = Array.from({ length: N }, () => new Array(N).fill(-1));
+for (const [dx, y, c] of PARTS) { subGrid[y][C - dx] = c; subGrid[y][C + dx] = c; }
+const subCache = new Map();
+function subSprite(dir) {
+  dir = ((dir % 32) + 32) % 32;
+  if (subCache.has(dir)) return subCache.get(dir);
+  const a = dir * Math.PI * 2 / 32, co = Math.cos(a), si = Math.sin(a);
+  const g = Array.from({ length: N }, () => new Array(N).fill(-1));
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const dx = x - C, dy = y - C, sx = Math.round(C + dx * co + dy * si), sy = Math.round(C - dx * si + dy * co);
+    if (sx >= 0 && sy >= 0 && sx < N && sy < N) g[y][x] = subGrid[sy][sx];
+  }
+  const cv = document.createElement('canvas'); cv.width = cv.height = N; const c = cv.getContext('2d');
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    let v = g[y][x];
+    if (v < 0 && ((g[y - 1]?.[x] ?? -1) > 0 || (g[y + 1]?.[x] ?? -1) > 0 || (g[y][x - 1] ?? -1) > 0 || (g[y][x + 1] ?? -1) > 0)) v = 0;
+    if (v >= 0) { c.fillStyle = PAL[v]; c.fillRect(x, y, 1, 1); }
+  }
+  subCache.set(dir, cv); return cv;
+}
+
+// ---------- resource icons (5x5, shape tells them apart) ----------
+const ICONS = {
+  cristal: ['..4..', '.343.', '33333', '.333.', '..3..'],
+  corail: ['2.2.2', '.222.', '..2..', '.2.2.', '..1..'],
+  kelp: ['.3...', '..3..', '.3...', '..3..', '.3...'],
+  ferraille: ['22222', '21112', '21412', '21112', '22222'],
+  magmatite: ['.111.', '13431', '14441', '13431', '.111.'],
+  nodule: ['.444.', '4...4', '4.3.4', '4...4', '.444.'],
+};
+const ICON_KEYS = Object.keys(ICONS);
+function icon(ctx, k, x, y) {
+  const rows = ICONS[k];
+  for (let j = 0; j < 5; j++) for (let i = 0; i < 5; i++) { const ch = rows[j][i]; if (ch !== '.') { ctx.fillStyle = PAL[+ch]; ctx.fillRect(Math.round(x) + i, Math.round(y) + j, 1, 1); } }
+}
+
+// ---------- tiny pixel helpers ----------
+const R = (c, x, y, w, h, col) => { c.fillStyle = PAL[col]; c.fillRect(Math.round(x), Math.round(y), w, h); };
+const ring = (c, cx, cy, r, col, step = 0) => { const n = Math.max(8, Math.floor(r * 6)); for (let i = 0; i < n; i++) { if (step && i % step) continue; const a = i / n * Math.PI * 2; R(c, cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1, 1, col); } };
+const disc = (c, cx, cy, r, col) => { for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) if (x * x + y * y <= r * r) R(c, cx + x, cy + y, 1, 1, col); };
+const frameR = (c, x, y, w, h, col) => { R(c, x, y, w, 1, col); R(c, x, y + h - 1, w, 1, col); R(c, x, y, 1, h, col); R(c, x + w - 1, y, 1, h, col); };
+const ease = (a, b, t) => { const k = Math.min(1, Math.max(0, (t - a) / (b - a))); return k * k * (3 - 2 * k); };
+
+// ---------- bubble physics ----------
+class Bubbles {
+  constructor() { this.list = []; }
+  burst(x0, x1, y, n, spread = 1) {
+    for (let i = 0; i < n; i++) this.list.push({ x: x0 + Math.random() * (x1 - x0), y: y + (Math.random() - 0.5) * 3, vx: (Math.random() - 0.5) * 30 * spread, vy: (Math.random() - 0.5) * 20, r: Math.random() < 0.6 ? 1 : 2, ph: Math.random() * 6, life: 4 + Math.random() * 2 });
+  }
+  update(dt) {
+    for (const b of this.list) {
+      const buoy = 22 + b.r * 14; // bigger bubbles rise faster
+      b.vy -= buoy * dt;
+      b.vx += Math.sin(b.ph + b.life * 7) * 18 * dt; // wobble
+      const drag = Math.pow(0.12, dt);
+      b.vx *= drag; b.vy *= Math.pow(0.35, dt);
+      b.x += b.vx * dt; b.y += b.vy * dt;
+      b.r = Math.min(3.4, b.r + dt * 0.18); // expand as the pressure drops
+      b.life -= dt;
+    }
+    // merge touching bubbles (volume adds up)
+    for (let i = 0; i < this.list.length; i++) for (let j = i + 1; j < this.list.length; j++) {
+      const a = this.list[i], b = this.list[j];
+      if (a.dead || b.dead) continue;
+      if (Math.hypot(a.x - b.x, a.y - b.y) < (a.r + b.r) * 0.7) {
+        a.r = Math.min(4, Math.cbrt(a.r ** 3 + b.r ** 3)); a.x = (a.x + b.x) / 2; a.y = (a.y + b.y) / 2; a.vy = Math.min(a.vy, b.vy); b.dead = true;
+      }
+    }
+    this.list = this.list.filter((b) => !b.dead && b.life > 0 && b.y > -6);
+  }
+  render(c) {
+    for (const b of this.list) {
+      const r = Math.round(b.r);
+      if (r <= 1) { R(c, b.x, b.y - 1, 1, 1, 3); R(c, b.x - 1, b.y, 1, 1, 3); R(c, b.x + 1, b.y, 1, 1, 3); R(c, b.x, b.y + 1, 1, 1, 3); }
+      else { ring(c, b.x, b.y, r, r >= 3 ? 3 : 2); R(c, b.x - r * 0.4, b.y - r * 0.5, 1, 1, 4); }
+    }
+  }
+}
+
+// shared docking timeline (seconds, 12 s loop)
+const T = { approach: [0, 2.6], open: [2.6, 3.4], enter: [3.4, 4.8], close: [4.8, 5.5], deposit: [5.5, 8.2], open2: [8.2, 8.9], exit: [8.9, 10.6], close2: [10.6, 11.3], LOOP: 12 };
+
+function seaFloor(c, seed) {
+  R(c, 0, 0, IW, IH, 0);
+  let s = seed;
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 260; i++) { const x = rnd() * IW, y = rnd() * IH; if (((Math.round(x) + Math.round(y)) & 1) === 0) R(c, x, y, 1, 1, 1); }
+}
+
+// ===== three base looks around the iris moon pool =====
+const IW = 240, IH = 210;
+function drawIris(c, cx, cy, r, open, t) {
+  disc(c, cx, cy, r + 4, 2); disc(c, cx, cy, r, 0);
+  ring(c, cx, cy, r - 4 + Math.sin(t * 3), 1, 2);
+  const rot = open * 0.9;
+  for (let i = 0; i < 6; i++) {
+    const a0 = i * Math.PI / 3 + rot;
+    for (let d = Math.round(r * open); d <= r; d++) for (let k = 0; k <= 10; k++) {
+      const a = a0 + (k / 10) * (Math.PI / 3 + 0.12);
+      R(c, cx + Math.cos(a) * d, cy + Math.sin(a) * d, 1, 1, k === 0 ? 3 : (i % 2 ? 2 : 1));
+    }
+  }
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; R(c, cx + Math.cos(a) * (r + 2), cy + Math.sin(a) * (r + 2), 1, 1, open > 0.05 && Math.floor(t * 8 + i) % 3 === 0 ? 4 : 3); }
+}
+function drawSub(c, p) {
+  if (p.hidden) return;
+  const s = subSprite(p.dir), w = Math.max(9, Math.round(27 * p.scale));
+  c.drawImage(s, Math.round(p.x - w / 2), Math.round(p.y - w / 2), w, w);
+}
+function tube(c, x0, y0, x1, y1, t, wide = 6) {
+  const n = Math.hypot(x1 - x0, y1 - y0), ux = (x1 - x0) / n, uy = (y1 - y0) / n;
+  for (let d = 0; d <= n; d++) for (let k = -wide / 2; k <= wide / 2; k++) R(c, x0 + ux * d - uy * k, y0 + uy * d + ux * k, 1, 1, Math.abs(k) >= wide / 2 - 0.5 ? 2 : 1);
+  for (let d = 4; d < n - 2; d += 7) R(c, x0 + ux * d, y0 + uy * d, 1, 1, Math.floor(t * 2 + d) % 4 ? 3 : 4);
+  return (k) => [x0 + ux * n * k, y0 + uy * n * k];
+}
+function geodome(c, cx, cy, r, t, dense = 8) {
+  disc(c, cx, cy, r, 1);
+  for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
+    const d = x * x + y * y; if (d > r * r) continue;
+    if (((x + y) % dense === 0) || ((x - y) % dense === 0)) R(c, cx + x, cy + y, 1, 1, 2);
+  }
+  ring(c, cx, cy, r, 2); ring(c, cx, cy, r - 1, 2);
+  for (let a = -2.5; a < -1.5; a += 0.08) R(c, cx + Math.cos(a) * (r - 4), cy + Math.sin(a) * (r - 4), 1, 1, 3);
+  R(c, cx + Math.cos(-2) * (r - 7), cy + Math.sin(-2) * (r - 7), 1, 1, 4);
+}
+
+const IRIS_BASES = [
+  { n: 'A', name: 'Habitat à dômes', tag: 'Station habitée, vitrée',
+    text: "Un grand dôme géodésique vitré avec le puits iris au sommet, relié par des tubes à trois petits dômes : l'entrepôt, le labo et l'atelier. On voit les piles de ressources à travers la vitre de l'entrepôt.",
+    pool: [104, 118],
+    draw(c, t, st, bub) {
+      seaFloor(c, 31);
+      const toStore = tube(c, 130, 98, 178, 62, t);
+      tube(c, 80, 100, 46, 62, t, 5); tube(c, 82, 138, 48, 172, t, 5);
+      geodome(c, 104, 118, 40, t);
+      // storage dome with stacks behind the glass
+      geodome(c, 192, 52, 26, t, 10);
+      for (let i = 0; i < 6; i++) {
+        const x = 178 + (i % 3) * 10, y = 44 + Math.floor(i / 3) * 16, h = Math.round(st.bins[i] * 8);
+        for (let k = 0; k < h; k++) R(c, x, y + 8 - k, 6, 1, k % 2 ? 2 : 3);
+        icon(c, ICON_KEYS[i], x, y - 6 + 8 - h);
+      }
+      // lab dome: pulsing core + orbiting ring
+      geodome(c, 40, 54, 17, t, 7);
+      disc(c, 40, 54, 3, Math.floor(t * 3) % 2 ? 4 : 3);
+      for (let i = 0; i < 6; i++) { const a = t * 1.5 + i; R(c, 40 + Math.cos(a) * 9, 54 + Math.sin(a) * 9, 1, 1, 3); }
+      // workshop dome: rotating crane arm
+      geodome(c, 44, 176, 16, t, 7);
+      for (let d = 0; d < 11; d++) R(c, 44 + Math.cos(t * 0.8) * d, 176 + Math.sin(t * 0.8) * d, 1, 1, 4);
+      drawIris(c, 104, 118, 15, st.door, t);
+      drawSub(c, st.sub);
+      for (const q of st.flow) { const [x, y] = toStore(q.k); icon(c, ICON_KEYS[q.r], x - 2, y - 2); }
+      bub.render(c);
+    },
+    tube: true,
+  },
+  { n: 'B', name: 'Plateforme de forage', tag: 'Industrielle, mécanique',
+    text: "Un pont octogonal bordé de bandes de sécurité, avec ses tuyaux, une grue et des projecteurs. Le puits iris est au centre du pont. Le butin passe dans un broyeur à engrenages, puis un tapis le range dans six conteneurs.",
+    pool: [116, 124],
+    draw(c, t, st, bub) {
+      seaFloor(c, 47);
+      // pipes running off the deck
+      for (const [x0, y0, x1, y1] of [[40, 150, 0, 196], [196, 150, 240, 190], [60, 60, 0, 30]]) {
+        const n = Math.hypot(x1 - x0, y1 - y0);
+        for (let d = 0; d < n; d++) { const x = x0 + (x1 - x0) * d / n, y = y0 + (y1 - y0) * d / n; R(c, x, y, 3, 3, 1); R(c, x + 1, y + 1, 1, 1, d % 9 === 0 ? 3 : 2); }
+      }
+      const cx = 116, cy = 112, H = 78;
+      for (let y = -H; y <= H; y++) for (let x = -H; x <= H; x++) {
+        if (Math.abs(x) + Math.abs(y) > H * 1.35) continue;
+        const edge = Math.abs(x) > H - 4 || Math.abs(y) > H - 4 || Math.abs(x) + Math.abs(y) > H * 1.35 - 5;
+        let col = 1;
+        if (edge) col = ((x + y + 200) >> 2) & 1 ? 3 : 0;
+        else if ((x + 200) % 18 === 0 || (y + 200) % 18 === 0) col = 0;
+        R(c, cx + x, cy + y, 1, 1, col);
+      }
+      // corner floodlights
+      for (const [x, y] of [[-60, -60], [60, -60], [-60, 60], [60, 60]]) R(c, cx + x - 1, cy + y - 1, 3, 3, Math.floor(t * 2 + x) % 2 ? 4 : 2);
+      // containers along the top
+      for (let i = 0; i < 6; i++) {
+        const x = 66 + i * 18, y = 44;
+        R(c, x, y, 14, 18, 2); R(c, x + 1, y + 1, 12, 16, 0);
+        const h = Math.round(st.bins[i] * 14);
+        for (let k = 0; k < h; k++) R(c, x + 2, y + 16 - k, 10, 1, k % 3 === 0 ? 2 : 1);
+        icon(c, ICON_KEYS[i], x + 5, y + 16 - h - 5);
+      }
+      // crusher with a turning gear
+      const gx = 172, gy = 96;
+      R(c, gx - 12, gy - 12, 24, 24, 2); R(c, gx - 10, gy - 10, 20, 20, 0);
+      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + t * 2; for (let d = 2; d < 8; d++) R(c, gx + Math.cos(a) * d, gy + Math.sin(a) * d, 1, 1, d > 6 ? 3 : 2); }
+      // conveyor: pool -> crusher -> containers (moving dashes)
+      for (let x = 134; x < 160; x++) R(c, x, 116, 1, 1, (x + Math.floor(t * 20)) % 4 < 2 ? 2 : 0);
+      for (let y = 64; y < 84; y++) R(c, 172, y, 1, 1, (y + Math.floor(t * 20)) % 4 < 2 ? 2 : 0);
+      // crane
+      R(c, 54, 160, 7, 7, 2);
+      for (let d = 0; d < 26; d++) R(c, 57 + Math.cos(-0.9 + Math.sin(t * 0.5)) * d, 163 + Math.sin(-0.9 + Math.sin(t * 0.5)) * d, 1, 1, d % 4 ? 2 : 3);
+      drawIris(c, cx, 124, 16, st.door, t);
+      drawSub(c, st.sub);
+      for (const q of st.flow) {
+        const k = q.k;
+        let x, y;
+        if (k < 0.45) { x = 134 + (k / 0.45) * 26; y = 114; }
+        else if (k < 0.55) { x = 168; y = 94; }
+        else { x = 172 + (66 + q.r * 18 + 5 - 172) * ((k - 0.55) / 0.45); y = 80 - (k - 0.55) / 0.45 * 30; }
+        if (k < 0.45 || k > 0.55) icon(c, ICON_KEYS[q.r], x - 2, y - 2);
+      }
+      bub.render(c);
+    },
+  },
+  { n: 'C', name: 'Base corail vivant', tag: 'Organique, lumineuse',
+    text: "La base est creusée dans un énorme massif de corail : des coraux poussent sur ses flancs et des hublots y brillent. Le puits iris est au fond d'un cratère. Le butin remonte dans six poches translucides qui gonflent à mesure qu'elles se remplissent.",
+    pool: [120, 124],
+    draw(c, t, st, bub) {
+      seaFloor(c, 59);
+      const cx = 120, cy = 124;
+      // rock massif
+      for (let y = -74; y <= 74; y++) for (let x = -92; x <= 92; x++) {
+        const a = Math.atan2(y, x), rr = 70 + Math.sin(a * 3 + 1) * 10 + Math.sin(a * 7) * 5;
+        const d = Math.hypot(x * 0.82, y);
+        if (d > rr) continue;
+        R(c, cx + x, cy + y, 1, 1, d > rr - 2 ? 2 : (Math.sin(x * 0.6) * Math.cos(y * 0.5) > 0.82 ? 0 : 1));
+      }
+      // crater rim around the pool
+      ring(c, cx, cy, 26, 2); ring(c, cx, cy, 23, 0, 2);
+      // coral on the flanks
+      const branch = (x, y, a, len, dd) => { for (let s = 0; s < len; s++) { x += Math.cos(a); y += Math.sin(a); R(c, x, y, 1, 1, 2); } if (!dd) { R(c, x, y, 1, 1, 3); return; } branch(x, y, a - 0.5, len * 0.7, dd - 1); branch(x, y, a + 0.5, len * 0.7, dd - 1); };
+      for (const [x, y, a] of [[52, 150, 2.6], [70, 70, 3.6], [180, 70, -0.6], [188, 160, 0.5], [120, 192, 1.6]]) branch(x, y, a, 7, 3);
+      // glowing portholes
+      for (const [x, y, p] of [[70, 110, 0], [86, 160, 1], [160, 158, 2], [170, 112, 3], [96, 84, 4], [146, 86, 5]]) { R(c, x, y, 3, 2, 0); R(c, x + 1, y, 1, 1, Math.floor(t * 1.3 + p) % 3 ? 3 : 4); }
+      // anemones
+      for (const [x, y, p] of [[60, 128, 0], [180, 136, 2], [118, 60, 4]]) for (let k = 0; k < 8; k++) { const an = k * Math.PI / 4 + Math.sin(t * 2 + p + k) * 0.35; for (let d = 1; d <= 3; d++) R(c, x + Math.cos(an) * d, y + Math.sin(an) * d, 1, 1, d === 3 ? 4 : 3); }
+      // six pods on stalks above the massif
+      for (let i = 0; i < 6; i++) {
+        const px = 44 + i * 30, py = 26 + Math.sin(t * 1.2 + i) * 1.5, rr = 5 + Math.round(st.bins[i] * 5);
+        for (let y = py + rr; y < 56 + Math.abs(i - 2.5) * 6; y++) R(c, px + Math.sin(y * 0.3 + t) * 0.8, y, 1, 1, 2);
+        disc(c, px, py, rr, 0); ring(c, px, py, rr, 3);
+        for (let k = 0; k < 3; k++) R(c, px - 2 + k * 2, py + rr - 2 - Math.round(st.bins[i] * 4), 1, 1, 2);
+        icon(c, ICON_KEYS[i], px - 2, py - 2);
+      }
+      drawIris(c, cx, cy, 16, st.door, t);
+      drawSub(c, st.sub);
+      for (const q of st.flow) {
+        const tx = 44 + q.r * 30, ty = 28, k = q.k;
+        const x = cx + (tx - cx) * k + Math.sin(k * 9 + q.r) * 4, y = cy - 18 + (ty - cy + 18) * k;
+        icon(c, ICON_KEYS[q.r], x - 2, y - 2);
+      }
+      bub.render(c);
+    },
+  },
+];
+
+function irisSub(pool, tt) {
+  const [px, py] = pool;
+  const out = { x: px + 30, y: IH + 20 };
+  const p = { x: px, y: py, dir: 0, scale: 1, hidden: false };
+  if (tt < T.approach[1]) { const k = ease(T.approach[0], T.approach[1], tt); p.x = out.x + (px - out.x) * k; p.y = out.y + (py - out.y) * k; p.dir = Math.round(-3 * (1 - k)); }
+  else if (tt < T.enter[0]) { /* waits above the pool while the iris opens */ }
+  else if (tt < T.open2[0]) { const k = ease(T.enter[0], T.enter[1], tt); p.scale = 1 - 0.45 * k; p.hidden = tt > T.enter[1] + 0.1; }
+  else if (tt < T.exit[0] + 0.6) { const k = ease(T.open2[0] + 0.2, T.exit[0] + 0.6, tt); p.scale = 0.55 + 0.45 * k; p.hidden = tt < T.open2[0] + 0.2; p.dir = Math.round(16 * k); }
+  else { const k = ease(T.exit[0] + 0.6, T.exit[1] + 0.6, tt); p.dir = 16; p.x = px + (out.x - px) * k; p.y = py + (out.y - py) * k; }
+  return p;
+}
+
+function irisStep(v, tt, dt) {
+  const st = v.st, [px, py] = v.b.pool;
+  st.sub = irisSub(v.b.pool, tt);
+  st.door = Math.max(ease(T.open[0], T.open[1], tt) - ease(T.close[0], T.close[1], tt), ease(T.open2[0], T.open2[1], tt) - ease(T.close2[0] + 0.6, T.close2[1] + 0.6, tt));
+  const moving = [[T.open[0], T.open[1]], [T.close[0], T.close[1]], [T.open2[0], T.open2[1]], [T.close2[0] + 0.6, T.close2[1] + 0.6]].some(([a, b]) => tt > a && tt < b);
+  if (moving && Math.random() < dt * 40) { const a = Math.random() * 6.28; v.bub.burst(px + Math.cos(a) * 15, px + Math.cos(a) * 15 + 1, py + Math.sin(a) * 15, 1, 0.7); }
+  if (tt > T.enter[1] - 0.2 && !v.fired.big) { v.fired.big = 1; v.bub.list.push({ x: px, y: py - 2, vx: 0, vy: -8, r: 3.6, ph: 0, life: 5 }); v.bub.burst(px - 6, px + 6, py, 6, 0.5); }
+  if (tt > T.exit[0] && !v.fired.out) { v.fired.out = 1; v.bub.burst(px - 8, px + 8, py, 10, 0.8); }
+  if (tt < 1) v.fired = {};
+  const dep = tt > T.deposit[0] && tt < T.deposit[1];
+  if (dep && Math.random() < dt * 6) st.flow.push({ k: 0, r: Math.floor(Math.random() * 6) });
+  for (const q of st.flow) { q.k += dt * 0.7; if (q.k >= 1) { q.dead = 1; st.bins[q.r] = Math.min(1, st.bins[q.r] + 0.07); } }
+  st.flow = st.flow.filter((q) => !q.dead);
+  if (tt < 0.05) st.bins = [0.4, 0.25, 0.15, 0.3, 0.2, 0.05];
+  v.bub.update(dt);
+}
+
+const basesEl = document.getElementById('bases');
+const views = IRIS_BASES.map((b, i) => {
+  const el = document.createElement('article'); el.className = 'base';
+  el.innerHTML = `<canvas width="${IW}" height="${IH}" aria-label="Animation d'amarrage : ${b.name}"></canvas>
+    <h3>${b.n} · ${b.name}</h3><span class="tag">${b.tag}</span><p>${b.text}</p>`;
+  basesEl.appendChild(el);
+  const ctx = el.querySelector('canvas').getContext('2d'); ctx.imageSmoothingEnabled = false;
+  return { b, i, ctx, bub: new Bubbles(), st: { sub: {}, door: 0, flow: [], bins: [0.4, 0.25, 0.15, 0.3, 0.2, 0.05] }, fired: {} };
+});
+let prev = performance.now(), time = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - prev) / 1000); prev = now; time += dt;
+  for (const v of views) { const tt = time % T.LOOP; irisStep(v, tt, dt); v.b.draw(v.ctx, time, v.st, v.bub); }
+  if (!reduce) requestAnimationFrame(frame);
+}
+if (reduce) { for (let k = 0; k < 120; k++) { time = 6 + k / 60; for (const v of views) irisStep(v, time, 1 / 60); } for (const v of views) v.b.draw(v.ctx, time, v.st, v.bub); }
+else requestAnimationFrame(frame);
+window.__check = () => [...document.querySelectorAll('canvas')].map((c) => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, s = new Set(); for (let i = 0; i < d.length; i += 4) s.add(d[i] + ',' + d[i + 1] + ',' + d[i + 2] + ',' + d[i + 3]); return [...s]; });
+window.__T = () => time;
+})();
+</script>
