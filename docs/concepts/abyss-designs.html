@@ -1,0 +1,479 @@
+<title>Abyss Invaders Concepts</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: a sonar-console showroom. Hull bay (4 subs) then sector charts (4 worlds), the game's own 5 colours only. */
+:root {
+  --abyss: #0A1628;   /* palette 0: water */
+  --rock: #1E4A66;    /* palette 1: rocks, outlines */
+  --hull: #2F8FBF;    /* palette 2: ship, interactive */
+  --ore: #7CD3C8;     /* palette 3: resources */
+  --foam: #E3F2F0;    /* palette 4: light, text */
+  --display: "Silkscreen", "Courier New", monospace;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+body { background: var(--abyss); color: var(--foam); font-family: var(--body); line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 48px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; text-wrap: balance; letter-spacing: 0.02em; }
+h1 { font-size: clamp(28px, 6vw, 48px); line-height: 1.05; }
+h1 span { color: var(--hull); }
+h2 { font-size: 22px; }
+h3 { font-size: 16px; }
+p { margin: 0; max-width: 65ch; }
+.lede { color: var(--ore); }
+header { display: flex; flex-direction: column; gap: 14px; }
+.rule { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-family: var(--display); font-size: 12px; }
+.sw { width: 22px; height: 22px; border: 2px solid var(--rock); }
+.sec-head { display: flex; flex-direction: column; gap: 6px; border-top: 2px solid var(--rock); padding-top: 18px; }
+.eyebrow { font-family: var(--display); font-size: 11px; letter-spacing: 0.12em; color: var(--hull); text-transform: uppercase; }
+canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; max-width: 100%; }
+.subs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.sub { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 2px solid var(--rock); min-width: 0; }
+.sub:hover { border-color: var(--hull); }
+.sub:focus-visible { outline: 2px solid var(--foam); outline-offset: 2px; }
+.sub[aria-pressed="true"] { border-color: var(--ore); }
+.sub canvas { width: 100%; height: auto; }
+.tag { font-family: var(--display); font-size: 12px; color: var(--ore); }
+.sub[aria-pressed="true"] .pick { color: var(--abyss); background: var(--ore); }
+.pick { font-family: var(--display); font-size: 11px; padding: 2px 6px; border: 2px solid var(--ore); color: var(--ore); align-self: flex-start; }
+.legend { display: flex; justify-content: space-around; font-family: var(--display); font-size: 10px; color: var(--hull); }
+.sub p, .world p { font-size: 14px; }
+.worlds { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+.world { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.world canvas { width: 100%; height: auto; border: 2px solid var(--rock); }
+.ingame { font-size: 13px; color: var(--ore); }
+.ingame b { font-family: var(--display); font-weight: 400; font-size: 11px; color: var(--hull); margin-right: 6px; }
+footer { border-top: 2px solid var(--rock); padding-top: 18px; color: var(--ore); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Abyss Invaders · planche de concepts</div>
+    <h1>Choisis ta <span>coque</span> et tes <span>fonds</span></h1>
+    <p class="lede">Quatre sous-marins et quatre fonds marins, tous en pixel art avec les 5 couleurs du jeu. Clique sur un sous-marin pour le voir naviguer dans chaque monde. Chaque coque est montrée de base et au niveau maximum, avec les améliorations visibles.</p>
+    <div class="rule" aria-label="Les 5 couleurs autorisées">
+      <span>Règle :</span>
+      <span class="sw" style="background:var(--abyss)"></span><span class="sw" style="background:var(--rock)"></span><span class="sw" style="background:var(--hull)"></span><span class="sw" style="background:var(--ore)"></span><span class="sw" style="background:var(--foam)"></span>
+      <span>5 couleurs, rien d'autre</span>
+    </div>
+  </header>
+
+  <section style="display:flex;flex-direction:column;gap:18px">
+    <div class="sec-head">
+      <div class="eyebrow">Hangar</div>
+      <h2>Sous-marins</h2>
+    </div>
+    <div class="subs" id="subs"></div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:18px">
+    <div class="sec-head">
+      <div class="eyebrow">Cartes de secteur</div>
+      <h2>Mondes</h2>
+      <p>Chaque monde pourrait devenir un secteur, rejoint par une porte depuis la base. Le cristal reste la ressource, seul le décor change.</p>
+    </div>
+    <div class="worlds" id="worlds"></div>
+  </section>
+
+  <footer><p>Pour choisir, dis-moi par exemple « sous-marin B, monde 3 ». Tu peux aussi garder plusieurs mondes comme secteurs successifs.</p></footer>
+</div>
+
+<script>
+(() => {
+const PAL = ['#0A1628', '#1E4A66', '#2F8FBF', '#7CD3C8', '#E3F2F0'];
+const N = 31, C = 15;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---------- pixel grid helpers (offsets from the centre column, nose up) ----------
+const grid = () => Array.from({ length: N }, () => new Array(N).fill(-1));
+function P(g, x, y, c, m = true) {
+  y = Math.round(y);
+  const xs = m ? [x, -x] : [x];
+  for (const dx of xs) { const xx = Math.round(C + dx); if (y >= 0 && y < N && xx >= 0 && xx < N) g[y][xx] = c; }
+}
+function R(g, x0, y0, x1, y1, c, m = true) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) P(g, x, y, c, m); }
+function E(g, cx, cy, rx, ry, c, m = true) {
+  for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++)
+    for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++)
+      if (((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1) P(g, x, y, c, m);
+}
+function L(g, x0, y0, x1, y1, c, m = true) {
+  const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+  for (let i = 0; i <= n; i++) P(g, x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n, c, m);
+}
+
+// ---------- the four hulls: build(level 0|1, anim frame 0|1) ----------
+const SUBS = [
+  { id: 'A', name: 'Torpille', tag: 'Rapide, classique',
+    text: "Le cigare d'acier. Une coque longue et fine avec un kiosque au centre et une hélice à l'arrière. Au max, il gagne des tubes lance-torpilles, un phare de proue et une double hélice.",
+    build(lv, f) {
+      const g = grid();
+      R(g, 3, 21, 5, 23, 1); R(g, 3, 9, 4, 10, 1);
+      E(g, 0, 15, 3.6, 12.5, 2);
+      for (let y = 7; y <= 23; y++) P(g, 3, y, 1, false);
+      P(g, 0, 4, 3, false); P(g, 0, 5, 3, false);
+      R(g, -1, 11, 1, 16, 1, false); R(g, -1, 11, 1, 11, 3, false); P(g, 0, 10, 1, false);
+      if (!lv) {
+        if (f) { P(g, 1, 28, 4); P(g, 0, 29, 3, false); P(g, 0, 28, 1, false); }
+        else { P(g, 0, 28, 4, false); P(g, 2, 28, 3); }
+      } else {
+        R(g, 5, 9, 6, 19, 2); P(g, 5, 9, 4); P(g, 6, 9, 3); P(g, 6, 19, 1); P(g, 5, 19, 1);
+        R(g, -2, 13, 2, 13, 1, false); R(g, -2, 20, 2, 20, 1, false);
+        P(g, 0, 3, 4, false); P(g, 0, 9, 3, false); P(g, 0, 8, 4, false);
+        if (f) { P(g, 3, 29, 4); P(g, 2, 28, 3); P(g, 4, 28, 3); }
+        else { P(g, 3, 28, 4); P(g, 2, 29, 3); P(g, 4, 29, 3); }
+      }
+      return g;
+    } },
+  { id: 'B', name: 'Raie', tag: 'Agile, bio-mécanique',
+    text: "Une coque plate en forme de raie manta. Les ailes battent doucement et la queue sert de gouvernail. Au max, les ailes portent des canons, des veines lumineuses et un dard.",
+    build(lv, f) {
+      const g = grid();
+      for (let y = 19; y <= 29; y++) P(g, 0, y, 1, false);
+      P(g, 0, 29, 3, false);
+      for (let y = 8; y <= 19; y++) {
+        const w = Math.round(12.5 - Math.abs(y - 12) * 1.6) - f;
+        if (w > 3) { R(g, 3, y, w, y, 1); P(g, w, y, 2); }
+      }
+      P(g, 12 - f, 12, 3);
+      E(g, 0, 13, 3.5, 7.5, 2);
+      P(g, 0, 7, 3, false); P(g, 0, 8, 3, false);
+      P(g, 2, 8, 4); P(g, 1, 15, 1); P(g, 1, 17, 1);
+      if (lv) {
+        P(g, 5, 10, 3); P(g, 6, 11, 3); P(g, 7, 12, 3); P(g, 6, 13, 3); P(g, 5, 14, 3);
+        R(g, 8, 8, 8, 11, 2); P(g, 8, 7, 4);
+        P(g, 0, 11, 4, false); P(g, 0, 12, 3, false);
+        P(g, 1, 27, 3); P(g, 0, 30, 4, false);
+      }
+      return g;
+    } },
+  { id: 'C', name: 'Bathyscaphe', tag: 'Robuste, explorateur',
+    text: "Une sphère d'observation posée sur un flotteur, avec un grand hublot et des ballasts sur les côtés. Au max, il déploie des bras-pinces de minage, des projecteurs et un réservoir arrière.",
+    build(lv, f) {
+      const g = grid();
+      E(g, 7, 18, 1.6, 4.6, 2);
+      E(g, 0, 18, 5, 8.5, 1);
+      for (let y = 11; y <= 26; y++) P(g, 0, y, 2, false);
+      E(g, 0, 8, 5.2, 5.2, 2);
+      for (let y = 6; y <= 11; y++) P(g, 4, y, 1, false);
+      E(g, 0, 8, 2.2, 2.2, 3); P(g, 0, 8, 4, false); P(g, -1, 7, 4, false);
+      if (f) { P(g, 1, 28, 4); P(g, 0, 29, 3, false); } else { P(g, 0, 28, 4, false); P(g, 2, 28, 3); }
+      if (lv) {
+        L(g, 5, 10, 9, 5, 1); P(g, 9, 3, 3); P(g, 10, 4, 3); P(g, 8, 3, 3); P(g, 10, 3, 4);
+        P(g, 3, 3, 4); P(g, 2, 3, 3);
+        E(g, 0, 26, 3, 1.6, 2); R(g, -1, 26, 1, 26, 3, false);
+      }
+      return g;
+    } },
+  { id: 'D', name: 'Foreuse', tag: 'Lourd, mineur',
+    text: "Un engin de chantier sous-marin avec une foreuse qui tourne à l'avant et des chenilles sur les flancs. Au max, il ajoute deux foreuses latérales, des phares et des conteneurs de cristaux.",
+    build(lv, f) {
+      const g = grid();
+      R(g, 5, 11, 6, 24, 1);
+      for (let y = 11; y <= 24; y++) if ((y + f) % 3 === 0) P(g, 6, y, 2);
+      R(g, -4, 9, 4, 25, 2, false); P(g, 4, 9, -1); P(g, 4, 25, -1);
+      for (let y = 10; y <= 24; y++) P(g, 4, y, 1, false);
+      R(g, -2, 13, 2, 21, 1, false); R(g, -2, 11, 2, 11, 3, false); P(g, 0, 11, 4, false);
+      for (let y = 2; y <= 8; y++) {
+        const w = Math.floor((y - 1) / 2.4);
+        for (let x = -w; x <= w; x++) P(g, x, y, ((((y - x + f * 2) % 4) + 4) % 4) < 2 ? 3 : 1, false);
+      }
+      P(g, 0, 1, 4, false);
+      P(g, 2, 26, 1); P(g, 2, 27, f ? 3 : 1);
+      if (lv) {
+        for (let y = 6; y <= 10; y++) { const w = (y - 6) >> 1; for (let x = -w; x <= w; x++) P(g, 6 + x, y, ((y + x + f) & 1) ? 3 : 1); }
+        P(g, 6, 5, 4);
+        R(g, -3, 22, 3, 28, 3, false); for (let y = 22; y <= 28; y++) P(g, 0, y, 1, false); R(g, -3, 25, 3, 25, 1, false);
+        P(g, 3, 10, 4);
+      }
+      return g;
+    } },
+];
+
+// rotate (nearest neighbour) then add a dark 1px outline so the hull reads on any floor
+function rotOutline(src, a) {
+  const g = grid(), co = Math.cos(a), si = Math.sin(a);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const dx = x - C, dy = y - C;
+    const sx = Math.round(C + dx * co + dy * si), sy = Math.round(C - dx * si + dy * co);
+    if (sx >= 0 && sx < N && sy >= 0 && sy < N) g[y][x] = src[sy][sx];
+  }
+  const o = g.map((r) => r.slice());
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    if (g[y][x] >= 0) continue;
+    if ((g[y - 1]?.[x] ?? -1) > 0 || (g[y + 1]?.[x] ?? -1) > 0 || (g[y][x - 1] ?? -1) > 0 || (g[y][x + 1] ?? -1) > 0) o[y][x] = 0;
+  }
+  return o;
+}
+const cache = new Map();
+function subCanvas(i, lv, f, dir) {
+  const k = `${i}-${lv}-${f}-${dir}`;
+  if (cache.has(k)) return cache.get(k);
+  const g = rotOutline(SUBS[i].build(lv, f), dir * Math.PI * 2 / 32);
+  const cv = document.createElement('canvas'); cv.width = cv.height = N;
+  const x = cv.getContext('2d');
+  for (let y = 0; y < N; y++) for (let xx = 0; xx < N; xx++) if (g[y][xx] >= 0) { x.fillStyle = PAL[g[y][xx]]; x.fillRect(xx, y, 1, 1); }
+  cache.set(k, cv); return cv;
+}
+
+// ---------- hangar cards ----------
+let selected = 0;
+const subsEl = document.getElementById('subs');
+const cards = SUBS.map((s, i) => {
+  const b = document.createElement('button');
+  b.className = 'sub'; b.type = 'button'; b.id = 'sub-' + s.id;
+  b.setAttribute('aria-pressed', i === selected);
+  b.innerHTML = `<canvas width="72" height="36"></canvas>
+    <div class="legend"><span>Base</span><span>Niveau max</span></div>
+    <h3>${s.id} · ${s.name}</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span class="tag">${s.tag}</span><span class="pick">${i === selected ? 'Dans les mondes' : 'Essayer'}</span></div><p>${s.text}</p>`;
+  b.addEventListener('click', () => {
+    selected = i;
+    cards.forEach((c, j) => { c.el.setAttribute('aria-pressed', j === i); c.el.querySelector('.pick').textContent = j === i ? 'Dans les mondes' : 'Essayer'; });
+  });
+  subsEl.appendChild(b);
+  const cv = b.querySelector('canvas'), ctx = cv.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  return { el: b, ctx };
+});
+function drawCards(f, t) {
+  cards.forEach((c, i) => {
+    const x = c.ctx;
+    x.fillStyle = PAL[0]; x.fillRect(0, 0, 72, 36);
+    // a few rising bubbles behind the hulls
+    x.fillStyle = PAL[1];
+    for (let k = 0; k < 6; k++) { const by = 36 - ((t * 6 + k * 23 + i * 7) % 40); x.fillRect((k * 13 + i * 5) % 72, Math.floor(by), 1, 1); }
+    x.drawImage(subCanvas(i, 0, f, 0), 2, 3);
+    x.drawImage(subCanvas(i, 1, f, 0), 39, 3);
+  });
+}
+
+// ---------- world helpers ----------
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const W = 240, H = 320;
+function px(x, ctx, X, Y, c) { ctx.fillStyle = PAL[c]; ctx.fillRect(Math.round(X), Math.round(Y), 1, 1); }
+function layer() { const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'); c.imageSmoothingEnabled = false; return [cv, c]; }
+function blob(ctx, r, cx, cy, rad, fill, edge) {
+  const pts = [];
+  for (let y = -rad - 2; y <= rad + 2; y++) for (let x = -rad - 2; x <= rad + 2; x++) {
+    const a = Math.atan2(y, x), rr = rad * (0.82 + 0.18 * Math.sin(a * 3 + cx) * Math.cos(a * 2 + cy));
+    if (Math.hypot(x, y) <= rr) pts.push([x, y]);
+  }
+  const set = new Set(pts.map((p) => p[0] + ',' + p[1]));
+  for (const [x, y] of pts) {
+    const edgeP = !set.has(x + 1 + ',' + y) || !set.has(x - 1 + ',' + y) || !set.has(x + ',' + (y + 1)) || !set.has(x + ',' + (y - 1));
+    px(0, ctx, cx + x, cy + y, edgeP ? edge : fill);
+  }
+  return set;
+}
+function oreRock(ctx, r, cx, cy, rad, rich) {
+  blob(ctx, r, cx, cy, rad, 1, 2);
+  const n = rich ? 6 : 3;
+  for (let i = 0; i < n; i++) {
+    const a = r() * 6.28, d = r() * (rad - 2);
+    const x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d;
+    px(0, ctx, x, y, 3); px(0, ctx, x + 1, y, 3); px(0, ctx, x, y - 1, i === 0 || rich && i < 3 ? 4 : 3);
+  }
+}
+
+// ---------- the four worlds ----------
+const WORLDS = [
+  { n: 1, name: 'Récif corallien', tag: 'Secteur de départ',
+    text: "Eaux calmes au-dessus du sable : coraux-cerveaux, coraux branchus, anémones qui ondulent et bancs de poissons. Lisible et accueillant.",
+    play: "Zone sûre autour de la base. Les bancs de poissons s'écartent au passage du sous-marin.",
+    gen(ctx, r) {
+      for (let i = 0; i < 6; i++) {
+        const cx = r() * W, cy = r() * H, rad = 30 + r() * 30;
+        for (let y = -rad; y <= rad; y++) for (let x = -rad; x <= rad; x++) {
+          const X = Math.round(cx + x), Y = Math.round(cy + y);
+          if (Math.hypot(x, y) > rad * (0.75 + 0.25 * Math.sin(x * 0.2 + y * 0.13))) continue;
+          if ((Y + Math.round(Math.sin(X / 9) * 3)) % 9 === 0) px(0, ctx, X, Y, 1);
+          else if (X % 3 === 0 && Y % 3 === 0) px(0, ctx, X, Y, 1);
+        }
+      }
+      for (let i = 0; i < 4; i++) {
+        const cx = 20 + r() * 200, cy = 20 + r() * 280, rad = 7 + r() * 5;
+        const set = blob(ctx, r, cx, cy, rad, 1, 2);
+        for (const k of set) { const [x, y] = k.split(',').map(Number); if (Math.sin(x * 1.1 + Math.cos(y * 0.9) * 2) > 0.55 && Math.hypot(x, y) < rad - 2) px(0, ctx, cx + x, cy + y, 2); }
+      }
+      const branch = (x, y, a, len, d) => {
+        for (let s = 0; s < len; s++) { x += Math.cos(a); y += Math.sin(a); px(0, ctx, x, y, 2); }
+        if (d === 0) { px(0, ctx, x, y, 3); return; }
+        branch(x, y, a - 0.5 - r() * 0.3, len * 0.75, d - 1); branch(x, y, a + 0.5 + r() * 0.3, len * 0.75, d - 1);
+      };
+      for (let i = 0; i < 7; i++) { const x = r() * W, y = r() * H; for (let k = 0; k < 3; k++) branch(x, y, k * 2.1 + r(), 5 + r() * 3, 3); }
+      for (let i = 0; i < 3; i++) oreRock(ctx, r, 30 + r() * 180, 30 + r() * 260, 6 + r() * 3, false);
+    },
+    init(r) { return { anem: Array.from({ length: 6 }, () => [r() * W, r() * H, r() * 6]), fish: Array.from({ length: 9 }, (_, i) => [i * 0.35, (r() - 0.5) * 14, (r() - 0.5) * 14]) }; },
+    anim(ctx, s, t) {
+      for (const [x, y, p] of s.anem) {
+        px(0, ctx, x, y, 2);
+        for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4 + Math.sin(t * 2 + p + k) * 0.35; for (let d = 1; d <= 3; d++) px(0, ctx, x + Math.cos(a) * d, y + Math.sin(a) * d, d === 3 ? 4 : 3); }
+      }
+      const cx = 120 + Math.cos(t * 0.3) * 95, cy = 160 + Math.sin(t * 0.45) * 130;
+      const vx = -Math.sin(t * 0.3) * 95 * 0.3, vy = Math.cos(t * 0.45) * 130 * 0.45, m = Math.hypot(vx, vy) || 1;
+      for (const [lag, ox, oy] of s.fish) {
+        const fx = cx + ox - vx / m * lag * 8 + Math.sin(t * 3 + lag * 5), fy = cy + oy - vy / m * lag * 8;
+        px(0, ctx, fx, fy, 4); px(0, ctx, fx - vx / m, fy - vy / m, 3); px(0, ctx, fx - vx / m * 2, fy - vy / m * 2, 2);
+      }
+    } },
+  { n: 2, name: 'Fosse hydrothermale', tag: 'Secteur profond',
+    text: "Le noir presque total. Des fissures dans le plancher, des cheminées qui crachent leur panache, des vers tubicoles et des méduses lumineuses. La neige marine tombe lentement.",
+    play: "Minerai très riche près des cheminées, mais la visibilité est réduite et les panaches abîment la coque.",
+    gen(ctx, r) {
+      for (let i = 0; i < 7; i++) {
+        let x = r() * W, y = r() * H, a = r() * 6.28;
+        for (let s = 0; s < 70; s++) { a += (r() - 0.5) * 0.9; x += Math.cos(a); y += Math.sin(a); px(0, ctx, x, y, r() < 0.12 ? 2 : 1); if (r() < 0.04) { let bx = x, by = y, b = a + 1.2; for (let k = 0; k < 12; k++) { b += (r() - 0.5); bx += Math.cos(b); by += Math.sin(b); px(0, ctx, bx, by, 1); } } }
+      }
+      for (let i = 0; i < 3; i++) oreRock(ctx, r, 30 + r() * 180, 30 + r() * 260, 6 + r() * 4, true);
+    },
+    init(r) {
+      return { vents: [[60, 90], [175, 175], [80, 255]].map(([x, y]) => ({ x, y, worms: Array.from({ length: 12 }, () => [r() * 6.28, 6 + r() * 4, r() * 6]) })),
+        snow: Array.from({ length: 50 }, () => [r() * W, r() * H, 3 + r() * 5]), jelly: [[0, 1.3], [3, 0.9]] };
+    },
+    anim(ctx, s, t) {
+      for (const sn of s.snow) px(0, ctx, (sn[0] + t * sn[2] * 0.6) % W, (sn[1] + t * sn[2]) % H, 1);
+      for (const v of s.vents) {
+        for (let k = 0; k < 26; k++) {
+          const age = (t * 0.6 + k / 26) % 1, d = age * 50;
+          const x = v.x + d * 0.9 + Math.sin(age * 9 + k) * age * 8, y = v.y - d * 0.4 + Math.cos(age * 7 + k * 2) * age * 8;
+          if (age < 0.8 || (k & 1)) px(0, ctx, x, y, age < 0.15 ? 2 : 1);
+        }
+        for (let a = 0; a < 6.28; a += 0.25) px(0, ctx, v.x + Math.cos(a) * 4, v.y + Math.sin(a) * 4, 1);
+        for (let a = 0; a < 6.28; a += 0.4) px(0, ctx, v.x + Math.cos(a) * 2, v.y + Math.sin(a) * 2, 2);
+        px(0, ctx, v.x, v.y, Math.sin(t * 6) > 0 ? 4 : 3);
+        for (const [a, d, p] of v.worms) { const x = v.x + Math.cos(a) * d, y = v.y + Math.sin(a) * d; px(0, ctx, x, y, 1); if (Math.sin(t * 1.5 + p) > -0.3) px(0, ctx, x + Math.cos(a), y + Math.sin(a), Math.sin(t * 1.5 + p) > 0.7 ? 4 : 3); }
+      }
+      for (const [p, sp] of s.jelly) {
+        const x = 120 + Math.sin(t * 0.2 * sp + p) * 90, y = 160 + Math.cos(t * 0.15 * sp + p * 2) * 120;
+        const rr = 2.5 + Math.sin(t * 3 + p) * 0.8;
+        for (let a = 0; a < 6.28; a += 0.3) px(0, ctx, x + Math.cos(a) * rr, y + Math.sin(a) * rr, 3);
+        px(0, ctx, x, y, 4);
+        for (let k = -1; k <= 1; k++) for (let d = 1; d <= 5; d++) px(0, ctx, x + k * 2 + Math.sin(t * 4 + d + k) * 0.8, y + rr + d, 2);
+      }
+    } },
+  { n: 3, name: "Cimetière d'épaves", tag: 'Secteur de récupération',
+    text: "Un cargo coulé, cassé en deux, avec ses cales ouvertes, son mât couché et sa chaîne d'ancre. Des conteneurs éparpillés, des algues et une murène qui sort d'un hublot.",
+    play: "Fouiller les cales et les conteneurs rapporte des pièces d'amélioration. Les ennemis s'embusquent dans la coque.",
+    gen(ctx, r) {
+      for (let i = 0; i < 900; i++) { const x = r() * W, y = r() * H; if (((Math.round(x) + Math.round(y)) & 1) === 0) px(0, ctx, x, y, 1); }
+      const ang = -0.55, co = Math.cos(ang), si = Math.sin(ang), CX = 125, CY = 150;
+      for (let Y = 0; Y < H; Y++) for (let X = 0; X < W; X++) {
+        const dx = X - CX, dy = Y - CY, u = dx * co + dy * si, v = -dx * si + dy * co;
+        if (u < -78 || u > 80) continue;
+        const hw = u > 35 ? 17 * (80 - u) / 45 : u < -68 ? 17 * Math.sqrt(1 - ((u + 68) / 10) ** 2) : 17;
+        if (Math.abs(v) > hw) continue;
+        const gap = u > -18 && u < -6 && Math.abs(v + Math.sin(u) * 3) < hw - 3;
+        if (gap) { if (((X + Y) & 1) === 0) px(0, ctx, X, Y, 1); continue; }
+        if (Math.abs(v) > hw - 2) px(0, ctx, X, Y, 2);
+        else if ([45, 15, -40].some((h) => Math.abs(u - h) < 7 && Math.abs(v) < 8)) px(0, ctx, X, Y, Math.abs(u - [45, 15, -40].find((h) => Math.abs(u - h) < 7)) > 5.5 || Math.abs(v) > 6.5 ? 2 : 0);
+        else if (Math.round(v) % 4 === 0) px(0, ctx, X, Y, 0);
+        else px(0, ctx, X, Y, 1);
+      }
+      for (let k = 0; k < 60; k++) { const u = 20 + k * 0.4, v = 20 + k * 0.85; px(0, ctx, CX + u * co - v * si, CY + u * si + v * co, 2); }
+      for (let k = 0; k < 4; k++) px(0, ctx, CX + (-30 - k * 8) * co - 13 * si, CY + (-30 - k * 8) * si + 13 * co, 3);
+      let ax = 200, ay = 40;
+      for (let k = 0; k < 50; k++) { const bx = CX + 78 * co, by = CY + 78 * si; const x = bx + (ax - bx) * k / 50, y = by + (ay - by) * k / 50 + Math.sin(k / 50 * Math.PI) * 10; px(0, ctx, x, y, k % 2 ? 2 : 1); }
+      for (let y = -6; y <= 4; y++) px(0, ctx, ax, ay + y, 2);
+      for (let x = -3; x <= 3; x++) px(0, ctx, ax + x, ay - 4, 2);
+      for (let a = 0.3; a < 2.9; a += 0.2) px(0, ctx, ax + Math.cos(a) * 5, ay + Math.sin(a) * 5, 2);
+      for (let i = 0; i < 5; i++) {
+        const cx = 20 + r() * 200, cy = 20 + r() * 280, a = r() * 3;
+        for (let y = -4; y <= 4; y++) for (let x = -7; x <= 7; x++) {
+          const X = cx + x * Math.cos(a) - y * Math.sin(a), Y = cy + x * Math.sin(a) + y * Math.cos(a);
+          px(0, ctx, X, Y, Math.abs(x) === 7 || Math.abs(y) === 4 ? 2 : (x % 3 === 0 ? 0 : 1));
+        }
+      }
+      oreRock(ctx, r, 30, 270, 7, false); oreRock(ctx, r, 210, 230, 6, false);
+    },
+    init(r) { return { weed: Array.from({ length: 10 }, () => [r() * W, r() * H, r() * 6]) }; },
+    anim(ctx, s, t) {
+      for (const [x, y, p] of s.weed) for (let b = -1; b <= 1; b++) for (let d = 1; d <= 4; d++) px(0, ctx, x + b * 2 + Math.sin(t * 1.6 + p + d * 0.5) * d * 0.35, y - d, d === 4 ? 3 : 2);
+      const co = Math.cos(-0.55), si = Math.sin(-0.55), hx = 125 + 40 * co - 0 * si, hy = 150 + 40 * si;
+      const out = (Math.sin(t * 0.7) + 1) / 2 * 16;
+      for (let k = 0; k < 12; k++) { const d = out - k; if (d < 0) break; const x = hx + 20 * si + d * si + Math.sin(t * 5 + k * 0.8) * 1.5 * co, y = hy - 20 * co - d * co + Math.sin(t * 5 + k * 0.8) * 1.5 * si; px(0, ctx, x, y, k === 0 ? 4 : 3); }
+    } },
+  { n: 4, name: 'Forêt de kelp', tag: 'Secteur couvert',
+    text: "De grandes algues ancrées sur des rochers, qui ondulent dans le courant sous des rais de lumière. On s'y faufile entre les tiges.",
+    play: "Les algues cachent le sous-marin des patrouilles : idéal pour fuir ou contourner un groupe.",
+    gen(ctx, r) {
+      for (let i = 0; i < 9; i++) blob(ctx, r, r() * W, r() * H, 5 + r() * 6, 1, 2);
+      for (let i = 0; i < 3; i++) oreRock(ctx, r, 30 + r() * 180, 30 + r() * 260, 6 + r() * 3, false);
+    },
+    init(r) { return { kelp: Array.from({ length: 10 }, () => ({ x: r() * W, y: 40 + r() * 290, L: 40 + r() * 45, a: -1.1 - r() * 0.5, p: r() * 6 })) }; },
+    under(ctx, s, t) {
+      ctx.fillStyle = PAL[1];
+      for (let y = 0; y < H; y += 2) for (let x = (y >> 1) & 1; x < W; x += 2) if (((x + y * 0.6 + t * 8) % 70) < 12) ctx.fillRect(x, y, 1, 1);
+    },
+    anim(ctx, s, t) {
+      for (const k of s.kelp) {
+        let x = k.x, y = k.y;
+        px(0, ctx, x, y, 2); px(0, ctx, x + 1, y, 1); px(0, ctx, x - 1, y, 1); px(0, ctx, x, y + 1, 1);
+        for (let d = 0; d < k.L; d++) {
+          const a = k.a + Math.sin(t * 1.1 + d * 0.07 + k.p) * 0.35 * (d / k.L);
+          x += Math.cos(a); y += Math.sin(a);
+          px(0, ctx, x, y, d > k.L * 0.7 ? 2 : 1);
+          if (d % 5 === 2) { const side = (d % 10 === 2) ? 1 : -1, la = a + side * 1.2; for (let q = 1; q <= 3; q++) px(0, ctx, x + Math.cos(la) * q, y + Math.sin(la) * q, q === 3 ? 3 : 2); }
+        }
+        for (let q = 0; q < 6; q++) px(0, ctx, x + Math.cos(q + t) * 2, y + Math.sin(q + t) * 2, 3);
+        px(0, ctx, x, y, 4);
+      }
+    } },
+];
+
+// ---------- world cards ----------
+const worldsEl = document.getElementById('worlds');
+const worlds = WORLDS.map((w, i) => {
+  const el = document.createElement('article'); el.className = 'world';
+  el.innerHTML = `<canvas width="${W}" height="${H}" aria-label="Aperçu animé : ${w.name}"></canvas>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap"><h3>${w.n} · ${w.name}</h3><span class="tag">${w.tag}</span></div>
+    <p>${w.text}</p><p class="ingame"><b>EN JEU</b>${w.play}</p>`;
+  worldsEl.appendChild(el);
+  const ctx = el.querySelector('canvas').getContext('2d'); ctx.imageSmoothingEnabled = false;
+  const r = rng(101 + i * 977);
+  const [deco, dctx] = layer(); w.gen(dctx, r);
+  return { w, ctx, deco, state: w.init(r), wake: [], last: null };
+});
+
+function subOn(world, t, dt) {
+  const ctx = world.ctx;
+  const ph = t * 0.35;
+  const x = 120 + Math.sin(ph) * 72, y = 165 + Math.sin(ph * 2) * 95;
+  const vx = Math.cos(ph) * 72 * 0.35, vy = Math.cos(ph * 2) * 95 * 0.7;
+  const h = Math.atan2(vy, vx) + Math.PI / 2;
+  const dir = ((Math.round(h / (Math.PI * 2 / 32)) % 32) + 32) % 32;
+  // subtle wake, same rule as the game: dark tones, fades to sparse pixels
+  const sp = Math.hypot(vx, vy);
+  world.acc = (world.acc || 0) + dt * sp / 6;
+  while (world.acc >= 1) {
+    world.acc--;
+    const back = 10, ux = -vx / sp, uy = -vy / sp;
+    world.wake.push({ x: x + ux * back + (Math.random() - 0.5) * 3, y: y + uy * back + (Math.random() - 0.5) * 3, vx: ux * 8 + (Math.random() - 0.5) * 8, vy: uy * 8 + (Math.random() - 0.5) * 8, life: 0.3 + Math.random() * 0.4, c: Math.random() < 0.2 ? 2 : 1 });
+  }
+  for (const p of world.wake) { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
+  world.wake = world.wake.filter((p) => p.life > 0);
+  for (const p of world.wake) { if (p.life < 0.15 && (Math.floor(p.x + p.y) & 1)) continue; px(0, ctx, p.x, p.y, p.life < 0.3 ? 1 : p.c); }
+  ctx.drawImage(subCanvas(selected, 1, Math.floor(t * 8) & 1, dir), Math.round(x - C), Math.round(y - C));
+}
+
+let prev = performance.now(), T = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - prev) / 1000); prev = now; T += dt;
+  const f = Math.floor(T * 6) & 1;
+  drawCards(f, T);
+  for (const wd of worlds) {
+    const ctx = wd.ctx;
+    ctx.fillStyle = PAL[0]; ctx.fillRect(0, 0, W, H);
+    if (wd.w.under) wd.w.under(ctx, wd.state, T);
+    ctx.drawImage(wd.deco, 0, 0);
+    wd.w.anim(ctx, wd.state, T);
+    subOn(wd, T, dt);
+  }
+  if (!reduce) requestAnimationFrame(frame);
+}
+if (reduce) { T = 4; frame(performance.now()); } else requestAnimationFrame(frame);
+window.__check = () => [...document.querySelectorAll('canvas')].map((c) => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, s = new Set(); for (let i = 0; i < d.length; i += 4) s.add(d[i] + ',' + d[i + 1] + ',' + d[i + 2] + ',' + d[i + 3]); return [...s]; });
+})();
+</script>

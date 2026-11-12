@@ -1,0 +1,700 @@
+<title>Abyss Invaders Base Biomeca</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: same sonar-console look as the concept board. Part 1 = three animated docking bases, part 2 = resource / workshop / recipe chart. */
+:root {
+  --abyss: #0A1628; --rock: #1E4A66; --hull: #2F8FBF; --ore: #7CD3C8; --foam: #E3F2F0;
+  --display: "Silkscreen", "Courier New", monospace;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+body { background: var(--abyss); color: var(--foam); font-family: var(--body); line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 48px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; text-wrap: balance; letter-spacing: 0.02em; }
+h1 { font-size: clamp(28px, 6vw, 46px); line-height: 1.05; }
+h1 span { color: var(--hull); }
+h2 { font-size: 22px; }
+h3 { font-size: 16px; }
+p { margin: 0; max-width: 65ch; }
+.lede { color: var(--ore); }
+section, header { display: flex; flex-direction: column; gap: 16px; }
+.sec-head { display: flex; flex-direction: column; gap: 6px; border-top: 2px solid var(--rock); padding-top: 18px; }
+.eyebrow { font-family: var(--display); font-size: 11px; letter-spacing: 0.12em; color: var(--hull); text-transform: uppercase; }
+canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; max-width: 100%; }
+.bases { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.base { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.base canvas { width: 100%; height: auto; border: 2px solid var(--rock); }
+.tag { font-family: var(--display); font-size: 12px; color: var(--ore); }
+.base p { font-size: 14px; }
+ul.steps { margin: 0; padding-left: 18px; font-size: 14px; display: flex; flex-direction: column; gap: 2px; }
+.res { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.chip { display: flex; gap: 10px; align-items: flex-start; border: 2px solid var(--rock); padding: 10px; min-width: 0; }
+.chip canvas { width: 35px; height: 35px; flex: none; }
+.chip b { font-family: var(--display); font-weight: 400; font-size: 12px; display: block; }
+.chip span { font-size: 13px; color: var(--ore); }
+.tablewrap { overflow-x: auto; border: 2px solid var(--rock); }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rock); vertical-align: top; }
+th { font-family: var(--display); font-weight: 400; font-size: 11px; color: var(--hull); letter-spacing: 0.06em; }
+td:first-child { font-family: var(--display); font-size: 12px; white-space: nowrap; }
+.flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-family: var(--display); font-size: 12px; }
+.flow span { border: 2px solid var(--hull); padding: 4px 8px; }
+.flow i { font-style: normal; color: var(--hull); }
+.inv { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.inv > div { border: 2px solid var(--rock); padding: 14px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+footer { border-top: 2px solid var(--rock); padding-top: 18px; color: var(--ore); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Abyss Invaders · base biomécanique</div>
+    <h1>Quatre bases <span>iris</span> biomécaniques</h1>
+    <p class="lede">Même porte iris, même amarrage à bulles, quatre machines différentes autour, toutes dans un esprit biomécanique et un peu steampunk. Chacune range le butin à sa façon.</p>
+  </header>
+  <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;align-items:start" id="grid">
+    <article class="base"><canvas id="base" width="320" height="260" aria-label="Base 1 animée"></canvas><h3>1 · Carapace à engrenages</h3><span class="tag">La version précédente</span><p>Carapace de plaques nervurées, train d'engrenages qui actionne l'iris, treuil à godets vers six cuves rivetées, poumon à pistons et volant.</p></article>
+  </section>
+  <footer><p>Dis-moi le numéro qui te plaît, ou un mélange (par exemple la coquille du 2 avec la chaîne à godets du 3).</p></footer>
+</div>
+
+<script>
+
+
+(() => {
+const PAL = ['#0A1628', '#1E4A66', '#2F8FBF', '#7CD3C8', '#E3F2F0'];
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+
+// ---------- the bathyscaphe (same parts as the game, level 0) ----------
+const N = 27, C = 13;
+function ell(cx, cy, rx, ry, c) { const o = []; for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) if (x >= 0 && ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1) o.push([x, y, c]); return o; }
+function range(dx, y0, y1, c) { const o = []; for (let y = y0; y <= y1; y++) o.push([dx, y, c]); return o; }
+const PARTS = [...ell(0, 17, 4.4, 6.5, 1), ...range(0, 11, 23, 2), ...ell(5.4, 17, 1.4, 3, 2), ...ell(0, 9, 4.6, 4.6, 2), ...range(4, 8, 10, 1), ...ell(0, 9, 2, 2, 3), [0, 9, 4], [0, 24, 1], [1, 16, 3], [1, 17, 3]];
+const subGrid = Array.from({ length: N }, () => new Array(N).fill(-1));
+for (const [dx, y, c] of PARTS) { subGrid[y][C - dx] = c; subGrid[y][C + dx] = c; }
+const subCache = new Map();
+function subSprite(dir) {
+  dir = ((dir % 32) + 32) % 32;
+  if (subCache.has(dir)) return subCache.get(dir);
+  const a = dir * Math.PI * 2 / 32, co = Math.cos(a), si = Math.sin(a);
+  const g = Array.from({ length: N }, () => new Array(N).fill(-1));
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const dx = x - C, dy = y - C, sx = Math.round(C + dx * co + dy * si), sy = Math.round(C - dx * si + dy * co);
+    if (sx >= 0 && sy >= 0 && sx < N && sy < N) g[y][x] = subGrid[sy][sx];
+  }
+  const cv = document.createElement('canvas'); cv.width = cv.height = N; const c = cv.getContext('2d');
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    let v = g[y][x];
+    if (v < 0 && ((g[y - 1]?.[x] ?? -1) > 0 || (g[y + 1]?.[x] ?? -1) > 0 || (g[y][x - 1] ?? -1) > 0 || (g[y][x + 1] ?? -1) > 0)) v = 0;
+    if (v >= 0) { c.fillStyle = PAL[v]; c.fillRect(x, y, 1, 1); }
+  }
+  subCache.set(dir, cv); return cv;
+}
+
+// ---------- resource icons (5x5, shape tells them apart) ----------
+const ICONS = {
+  cristal: ['..4..', '.343.', '33333', '.333.', '..3..'],
+  corail: ['2.2.2', '.222.', '..2..', '.2.2.', '..1..'],
+  kelp: ['.3...', '..3..', '.3...', '..3..', '.3...'],
+  ferraille: ['22222', '21112', '21412', '21112', '22222'],
+  magmatite: ['.111.', '13431', '14441', '13431', '.111.'],
+  nodule: ['.444.', '4...4', '4.3.4', '4...4', '.444.'],
+};
+const ICON_KEYS = Object.keys(ICONS);
+function icon(ctx, k, x, y) {
+  const rows = ICONS[k];
+  for (let j = 0; j < 5; j++) for (let i = 0; i < 5; i++) { const ch = rows[j][i]; if (ch !== '.') { ctx.fillStyle = PAL[+ch]; ctx.fillRect(Math.round(x) + i, Math.round(y) + j, 1, 1); } }
+}
+
+// ---------- tiny pixel helpers ----------
+const R = (c, x, y, w, h, col) => { c.fillStyle = PAL[col]; c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+const ring = (c, cx, cy, r, col, step = 0) => { const n = Math.max(8, Math.floor(r * 6)); for (let i = 0; i < n; i++) { if (step && i % step) continue; const a = i / n * Math.PI * 2; R(c, cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1, 1, col); } };
+const disc = (c, cx, cy, r, col) => { for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) if (x * x + y * y <= r * r) R(c, cx + x, cy + y, 1, 1, col); };
+const frameR = (c, x, y, w, h, col) => { R(c, x, y, w, 1, col); R(c, x, y + h - 1, w, 1, col); R(c, x, y, 1, h, col); R(c, x + w - 1, y, 1, h, col); };
+const ease = (a, b, t) => { const k = Math.min(1, Math.max(0, (t - a) / (b - a))); return k * k * (3 - 2 * k); };
+
+// ---------- bubble physics ----------
+class Bubbles {
+  constructor() { this.list = []; }
+  burst(x0, x1, y, n, spread = 1) {
+    for (let i = 0; i < n; i++) this.list.push({ x: x0 + Math.random() * (x1 - x0), y: y + (Math.random() - 0.5) * 3, vx: (Math.random() - 0.5) * 30 * spread, vy: (Math.random() - 0.5) * 20, r: Math.random() < 0.6 ? 1 : 2, ph: Math.random() * 6, life: 4 + Math.random() * 2 });
+  }
+  update(dt) {
+    for (const b of this.list) {
+      const buoy = 22 + b.r * 14; // bigger bubbles rise faster
+      b.vy -= buoy * dt;
+      b.vx += Math.sin(b.ph + b.life * 7) * 18 * dt; // wobble
+      const drag = Math.pow(0.12, dt);
+      b.vx *= drag; b.vy *= Math.pow(0.35, dt);
+      b.x += b.vx * dt; b.y += b.vy * dt;
+      b.r = Math.min(3.4, b.r + dt * 0.18); // expand as the pressure drops
+      b.life -= dt;
+    }
+    // merge touching bubbles (volume adds up)
+    for (let i = 0; i < this.list.length; i++) for (let j = i + 1; j < this.list.length; j++) {
+      const a = this.list[i], b = this.list[j];
+      if (a.dead || b.dead) continue;
+      if (Math.hypot(a.x - b.x, a.y - b.y) < (a.r + b.r) * 0.7) {
+        a.r = Math.min(4, Math.cbrt(a.r ** 3 + b.r ** 3)); a.x = (a.x + b.x) / 2; a.y = (a.y + b.y) / 2; a.vy = Math.min(a.vy, b.vy); b.dead = true;
+      }
+    }
+    this.list = this.list.filter((b) => !b.dead && b.life > 0 && b.y > -6);
+  }
+  render(c) {
+    for (const b of this.list) {
+      const r = Math.round(b.r);
+      if (r <= 1) { R(c, b.x, b.y - 1, 1, 1, 3); R(c, b.x - 1, b.y, 1, 1, 3); R(c, b.x + 1, b.y, 1, 1, 3); R(c, b.x, b.y + 1, 1, 1, 3); }
+      else { ring(c, b.x, b.y, r, r >= 3 ? 3 : 2); R(c, b.x - r * 0.4, b.y - r * 0.5, 1, 1, 4); }
+    }
+  }
+}
+
+// shared docking timeline (seconds, 12 s loop)
+const T = { approach: [0, 2.6], open: [2.6, 3.4], enter: [3.4, 4.8], close: [4.8, 5.5], deposit: [5.5, 8.2], open2: [8.2, 8.9], exit: [8.9, 10.6], close2: [10.6, 11.3], LOOP: 12 };
+
+function seaFloor(c, seed) {
+  R(c, 0, 0, IW, IH, 0);
+  let s = seed;
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 260; i++) { const x = rnd() * IW, y = rnd() * IH; if (((Math.round(x) + Math.round(y)) & 1) === 0) R(c, x, y, 1, 1, 1); }
+}
+
+function drawIris(c, cx, cy, r, open, t) {
+  disc(c, cx, cy, r + 4, 2); disc(c, cx, cy, r, 0);
+  ring(c, cx, cy, r - 4 + Math.sin(t * 3), 1, 2);
+  const rot = open * 0.9;
+  for (let i = 0; i < 6; i++) {
+    const a0 = i * Math.PI / 3 + rot;
+    for (let d = Math.round(r * open); d <= r; d++) for (let k = 0; k <= 10; k++) {
+      const a = a0 + (k / 10) * (Math.PI / 3 + 0.12);
+      R(c, cx + Math.cos(a) * d, cy + Math.sin(a) * d, 1, 1, k === 0 ? 3 : (i % 2 ? 2 : 1));
+    }
+  }
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; R(c, cx + Math.cos(a) * (r + 2), cy + Math.sin(a) * (r + 2), 1, 1, open > 0.05 && Math.floor(t * 8 + i) % 3 === 0 ? 4 : 3); }
+}
+// nearest-neighbour downscale done by hand, so no browser filtering can blend colours
+const scaledCache = new Map();
+function scaledSub(dir, w) {
+  const key = dir + ':' + w;
+  if (scaledCache.has(key)) return scaledCache.get(key);
+  const src = subSprite(dir), sd = src.getContext('2d').getImageData(0, 0, N, N).data;
+  const cv = document.createElement('canvas'); cv.width = cv.height = w; const x = cv.getContext('2d');
+  for (let j = 0; j < w; j++) for (let i = 0; i < w; i++) {
+    const sx = Math.floor((i + 0.5) * N / w), sy = Math.floor((j + 0.5) * N / w), o = (sy * N + sx) * 4;
+    if (sd[o + 3] < 255) continue;
+    x.fillStyle = `rgb(${sd[o]},${sd[o + 1]},${sd[o + 2]})`; x.fillRect(i, j, 1, 1);
+  }
+  scaledCache.set(key, cv); return cv;
+}
+function drawSub(c, p) {
+  if (p.hidden) return;
+  const w = Math.max(9, Math.round(27 * p.scale));
+  c.drawImage(scaledSub(p.dir, w), Math.round(p.x - w / 2), Math.round(p.y - w / 2));
+}
+// ===== biomechanical iris base =====
+const IW = 320, IH = 260;
+const POOL = [160, 152];
+
+function gear(c, cx, cy, r, teeth, a) {
+  disc(c, cx, cy, r, 1);
+  for (let i = 0; i < teeth; i++) {
+    const g = a + (i / teeth) * Math.PI * 2;
+    R(c, cx + Math.cos(g) * (r + 1) - 0.5, cy + Math.sin(g) * (r + 1) - 0.5, 2, 2, 2);
+  }
+  ring(c, cx, cy, r, 2);
+  const spokes = r > 7 ? 4 : 3;
+  for (let i = 0; i < spokes; i++) { const g = a + (i / spokes) * Math.PI * 2; for (let d = 2; d < r - 1; d++) R(c, cx + Math.cos(g) * d, cy + Math.sin(g) * d, 1, 1, 2); }
+  disc(c, cx, cy, Math.max(1, Math.round(r / 4)), 3); R(c, cx, cy, 1, 1, 4);
+}
+
+function pipe(c, pts, t, w = 4, flow = 1) {
+  let acc = 0;
+  for (let s = 0; s < pts.length - 1; s++) {
+    const [x0, y0] = pts[s], [x1, y1] = pts[s + 1];
+    const n = Math.hypot(x1 - x0, y1 - y0), ux = (x1 - x0) / n, uy = (y1 - y0) / n;
+    for (let d = 0; d <= n; d++, acc++) {
+      const x = x0 + ux * d, y = y0 + uy * d;
+      for (let k = -w / 2; k <= w / 2; k++) R(c, x - uy * k, y + ux * k, 1, 1, Math.abs(k) >= w / 2 - 0.5 ? 2 : 1);
+      if (acc % 11 === 0) for (let k = -w / 2 - 1; k <= w / 2 + 1; k++) R(c, x - uy * k, y + ux * k, 1, 1, 2); // vertebra joint
+      const pulse = ((acc - t * 26 * flow) % 23 + 23) % 23;
+      if (pulse < 2) R(c, x, y, 1, 1, pulse < 1 ? 4 : 3);
+    }
+  }
+}
+
+// a pulley loop between two wheels of the same radius; returns a point on the loop for u in [0,1)
+function beltLoop(x0, y0, x1, y1, r) {
+  const n = Math.hypot(x1 - x0, y1 - y0), ux = (x1 - x0) / n, uy = (y1 - y0) / n, nx = -uy, ny = ux;
+  const L = 2 * n + 2 * Math.PI * r;
+  return (u) => {
+    let s = (((u % 1) + 1) % 1) * L;
+    if (s < n) return [x0 + ux * s + nx * r, y0 + uy * s + ny * r, 1];
+    s -= n;
+    if (s < Math.PI * r) { const a = Math.atan2(ny, nx) - s / r; return [x1 + Math.cos(a) * r, y1 + Math.sin(a) * r, 0]; }
+    s -= Math.PI * r;
+    if (s < n) return [x1 - ux * s - nx * r, y1 - uy * s - ny * r, -1];
+    s -= n;
+    const a = Math.atan2(-ny, -nx) - s / r; return [x0 + Math.cos(a) * r, y0 + Math.sin(a) * r, 0];
+  };
+}
+function drawBelt(c, loop, t, speed, r0, r1, p0, p1, a) {
+  for (let i = 0; i < 260; i++) { const [x, y] = loop(i / 260); R(c, x, y, 1, 1, ((i + Math.floor(t * speed * 260)) % 6) < 3 ? 2 : 1); }
+  for (const [[x, y], r] of [[p0, r0], [p1, r1]]) {
+    disc(c, x, y, r, 0); ring(c, x, y, r, 2); ring(c, x, y, r - 2, 1);
+    for (let i = 0; i < 3; i++) { const g = a + i * 2.09; for (let d = 1; d < r - 1; d++) R(c, x + Math.cos(g) * d, y + Math.sin(g) * d, 1, 1, 2); }
+    R(c, x, y, 1, 1, 4);
+  }
+}
+
+function drawSub(c, p) {
+  if (p.hidden) return;
+  const w = Math.max(9, Math.round(27 * p.scale));
+  c.drawImage(scaledSub(p.dir, w), Math.round(p.x - w / 2), Math.round(p.y - w / 2));
+}
+
+function drawBiomech(c, t, st, bub) {
+  seaFloor(c, 77);
+  const [cx, cy] = POOL;
+  const motor = 0.35 + st.doorSpeed * 4 + (st.depositing ? 1.2 : 0); // the gear train drives the iris and the hoist
+  st.spin = (st.spin || 0) + motor * st.dt;
+  const sp = st.spin;
+
+  // --- anchoring legs (jointed struts down to the seabed)
+  for (const [a, len, ph] of [[2.5, 1, 0], [0.6, 1, 1], [3.9, 0.9, 2], [-0.5, 0.95, 3]]) {
+    let x = cx + Math.cos(a) * 60, y = cy + Math.sin(a) * 52;
+    let ang = a;
+    for (let s = 0; s < 3; s++) {
+      ang += 0.35 * (s ? 1 : 0) + Math.sin(t * 0.6 + ph + s) * 0.03;
+      const L = (26 - s * 6) * len;
+      for (let d = 0; d < L; d++) { x += Math.cos(ang); y += Math.sin(ang); R(c, x, y, 2, 2, 1); R(c, x, y, 1, 1, 2); }
+      disc(c, x, y, 2, 2); R(c, x, y, 1, 1, 3);
+    }
+    for (let k = -2; k <= 2; k++) R(c, x + k, y + 3, 1, 1, 2); // foot
+  }
+
+  // --- pipes (drawn under the carapace)
+  pipe(c, [[cx + 40, cy + 30], [222, 196], [248, 204]], t, 4);
+  pipe(c, [[cx - 44, cy + 26], [92, 206], [40, 252]], t, 4, -0.7);
+  pipe(c, [[cx - 50, cy - 18], [70, 110], [14, 112]], t, 3, 0.8);
+  pipe(c, [[cx - 20, cy - 52], [cx - 20, 76], [70, 76], [70, 66]], t, 4);
+  pipe(c, [[cx + 20, cy - 52], [cx + 20, 88], [250, 88], [250, 66]], t, 4);
+
+  // --- carapace: ribbed shell plates around the pool
+  for (let y = -80; y <= 80; y++) for (let x = -90; x <= 90; x++) {
+    const d = Math.hypot(x, y);
+    const a = Math.atan2(y, x);
+    const out = 62 + Math.sin(a * 3 + 0.4) * 7 + Math.sin(a * 5 + 1) * 4;
+    if (d < 24 || d > out) continue;
+    const seg = ((a + Math.PI) / (Math.PI * 2)) * 14;
+    const seam = Math.abs(seg - Math.round(seg)) * (d / 14) < 0.55;
+    let col = 1;
+    if (d > out - 2) col = 2;
+    else if (seam) col = 0;
+    else if (d < 27) col = 2;
+    else if (Math.abs(d - (out - 6)) < 0.6 && ((x + y) & 1)) col = 3;
+    else if (Math.abs(d - 38) < 0.6) col = 0;
+    else if (((Math.round(d) % 5) === 0) && ((x ^ y) & 1)) col = 0; // growth lines
+    R(c, cx + x, cy + y, 1, 1, col);
+  }
+  // bioluminescent nodules breathing along the shell
+  for (let i = 0; i < 14; i++) {
+    const a = (i + 0.5) / 14 * Math.PI * 2 - Math.PI, rr = 50 + Math.sin(a * 3 + 0.4) * 5;
+    const on = Math.sin(t * 2 - i * 0.6) > 0.3;
+    R(c, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 2, 2, on ? 4 : 3);
+  }
+
+  // --- gear train (left): drives the iris ring
+  const g1 = [cx - 34, cy - 4, 9, 12];
+  const g2 = [g1[0] - 15, g1[1] - 12, 6, 8];
+  const g3 = [g2[0] - 10, g2[1] + 11, 5, 6];
+  const g4 = [cx - 30, cy + 22, 7, 10];
+  gear(c, g1[0], g1[1], g1[2], g1[3], sp);
+  gear(c, g2[0], g2[1], g2[2], g2[3], -sp * g1[3] / g2[3] + 0.2);
+  gear(c, g3[0], g3[1], g3[2], g3[3], sp * g1[3] / g3[3] + 0.4);
+  gear(c, g4[0], g4[1], g4[2], g4[3], -sp * g1[3] / g4[3] + 0.3);
+  // gear train (right): powers the hoist pulley
+  const h1 = [cx + 36, cy - 10, 8, 10], h2 = [h1[0] + 13, h1[1] + 8, 5, 7];
+  gear(c, h1[0], h1[1], h1[2], h1[3], -sp * 1.2);
+  gear(c, h2[0], h2[1], h2[2], h2[3], sp * 1.2 * h1[3] / h2[3] + 0.3);
+
+  // --- lung / bellows pumped by two pistons (bottom right)
+  const breath = Math.sin(t * 1.6);
+  const lx = 270, ly = 214, rx = 20 + breath * 2.5, ry = 15 + breath * 2;
+  for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) {
+    if ((x / rx) ** 2 + (y / ry) ** 2 > 1) continue;
+    const edge = (x / rx) ** 2 + (y / ry) ** 2 > 0.82;
+    R(c, lx + x, ly + y, 1, 1, edge ? 2 : (Math.round(x + 40) % 5 === 0 ? 2 : 1));
+  }
+  R(c, lx - 2, ly - ry - 3, 5, 3, 2);
+  for (const [px, py, ph] of [[226, 236, 0], [236, 186, 1.6]]) {
+    const ext = 6 + Math.sin(t * 1.6 + ph) * 5;
+    R(c, px - 8, py - 3, 10, 7, 2); R(c, px - 7, py - 2, 8, 5, 1); // cylinder
+    R(c, px + 2, py - 1, ext, 3, 3); R(c, px + 2 + ext, py - 2, 2, 5, 2); // rod + crosshead
+  }
+  if (breath > 0.98 && Math.random() < 0.5) bub.burst(lx - 1, lx + 1, ly - ry - 4, 2, 0.4);
+
+  // --- valve wheel on the left pipe
+  const vx = 92, vy = 206, va = sp * 0.7;
+  ring(c, vx, vy, 6, 3); for (let i = 0; i < 4; i++) { const g = va + i * Math.PI / 2; for (let d = 1; d < 6; d++) R(c, vx + Math.cos(g) * d, vy + Math.sin(g) * d, 1, 1, 3); } R(c, vx, vy, 1, 1, 4);
+
+  // --- vats along the top (one per resource), with rising bubbles inside
+  for (let i = 0; i < 6; i++) {
+    const x = 52 + i * 38, y = 12, w = 26, h = 46;
+    for (let yy = 0; yy < h; yy++) {
+      const inset = yy < 4 ? 4 - yy : yy > h - 5 ? yy - (h - 5) : 0;
+      R(c, x + inset, y + yy, w - inset * 2, 1, 2);
+      if (inset < 3) R(c, x + inset + 2, y + yy, w - inset * 2 - 4, 1, 0);
+    }
+    const lvl = Math.round(st.bins[i] * (h - 10));
+    for (let k = 0; k < lvl; k++) R(c, x + 3, y + h - 5 - k, w - 6, 1, k === lvl - 1 ? 3 : 1);
+    for (let k = 0; k < 3; k++) { const by = y + h - 6 - ((t * 9 + k * 7 + i * 3) % Math.max(1, lvl)); R(c, x + 6 + k * 6, by, 1, 1, 3); }
+    for (let yy = y + 6; yy < y + h - 4; yy += 8) { R(c, x + 1, yy, w - 2, 1, 2); R(c, x + 1, yy, 1, 1, 4); R(c, x + w - 2, yy, 1, 1, 4); } // riveted glass ribs
+    R(c, x + w / 2 - 5, y + h, 11, 8, 2); R(c, x + w / 2 - 4, y + h + 1, 9, 6, 0);
+    icon(c, ICON_KEYS[i], x + w / 2 - 2, y + h + 1);
+  }
+
+  // --- hoist: vertical belt from the pool up to a horizontal belt over the vats
+  const vA = [cx + 46, cy - 26], vB = [cx + 46, 82];
+  const vertical = beltLoop(vA[0], vA[1], vB[0], vB[1], 5);
+  drawBelt(c, vertical, t, motor * 0.05, 5, 5, vA, vB, sp * 2);
+  const hA = [44, 70], hB = [276, 70];
+  const horiz = beltLoop(hB[0], hB[1], hA[0], hA[1], 4);
+  drawBelt(c, horiz, t, motor * 0.04, 4, 4, hB, hA, -sp * 2);
+
+  // --- steampunk: riveted collar, pressure gauges, flywheel + crank, exhaust stacks
+  for (let i = 0; i < 28; i++) { const a = i / 28 * Math.PI * 2; R(c, cx + Math.cos(a) * 25, cy + Math.sin(a) * 25, 1, 1, i % 2 ? 4 : 3); }
+  for (const [gx, gy, ph] of [[cx - 62, cy - 40, 0], [cx + 64, cy + 10, 2]]) {
+    disc(c, gx, gy, 6, 0); ring(c, gx, gy, 6, 3); ring(c, gx, gy, 7, 2);
+    for (let k = 0; k < 5; k++) { const a = Math.PI * 0.8 + k * Math.PI * 0.35; R(c, gx + Math.cos(a) * 5, gy + Math.sin(a) * 5, 1, 1, 2); }
+    const needle = Math.PI * 0.8 + (0.5 + 0.4 * Math.sin(t * 0.9 + ph) + st.doorSpeed * 0.3) * Math.PI * 1.4;
+    for (let d = 0; d < 5; d++) R(c, gx + Math.cos(needle) * d, gy + Math.sin(needle) * d, 1, 1, 4);
+    R(c, gx - 1, gy + 8, 3, 2, 2);
+  }
+  // flywheel driving the lung pistons through a crank rod
+  const fx = 214, fy = 228, fr = 11, fa = t * 1.6;
+  ring(c, fx, fy, fr, 2); ring(c, fx, fy, fr - 1, 3); ring(c, fx, fy, fr - 3, 1);
+  for (let i = 0; i < 6; i++) { const g = fa + i * Math.PI / 3; for (let d = 2; d < fr - 1; d++) R(c, fx + Math.cos(g) * d, fy + Math.sin(g) * d, 1, 1, 2); }
+  disc(c, fx, fy, 2, 3);
+  const pinX = fx + Math.cos(fa) * (fr - 3), pinY = fy + Math.sin(fa) * (fr - 3);
+  for (let k = 0; k <= 12; k++) R(c, pinX + (226 - pinX) * k / 12, pinY + (236 - pinY) * k / 12, 1, 1, 4);
+  R(c, pinX - 1, pinY - 1, 2, 2, 4);
+  // exhaust stacks puffing bubble steam
+  for (const [ex, ey, ph] of [[cx - 52, cy + 40, 0], [cx + 30, cy + 52, 1.3]]) {
+    R(c, ex - 3, ey - 9, 7, 10, 2); R(c, ex - 2, ey - 8, 5, 8, 1); R(c, ex - 4, ey - 10, 9, 2, 3);
+    for (let k = 0; k < 3; k++) R(c, ex - 2 + k * 2, ey - 4, 1, 1, 0);
+    if (Math.sin(t * 2.2 + ph) > 0.97 && Math.random() < 0.6) bub.burst(ex - 1, ex + 1, ey - 11, 3, 0.5);
+  }
+
+  // iris + sub
+  drawIris(c, cx, cy, 17, st.door, t);
+  drawSub(c, st.sub);
+
+  // buckets carrying the haul: up the hoist, then along the top belt, dropping into the vat
+  for (const q of st.flow) {
+    let x, y;
+    if (q.k < 0.45) { const k = q.k / 0.45; x = vA[0] + 5; y = vA[1] + (vB[1] - vA[1]) * k; }
+    else { const k = (q.k - 0.45) / 0.55; const tx = 52 + q.r * 38 + 13; x = vB[0] + (tx - vB[0]) * k; y = 66; if (k > 0.92) y += (k - 0.92) * 60; }
+    R(c, x - 3, y + 3, 7, 1, 2); R(c, x - 3, y, 1, 3, 2); R(c, x + 3, y, 1, 3, 2); // bucket
+    icon(c, ICON_KEYS[q.r], x - 2, y - 2);
+  }
+
+  // hanging cables swaying from the vats
+  for (let i = 0; i < 5; i++) { const x0 = 71 + i * 38; for (let k = 0; k < 10; k++) R(c, x0 + Math.sin(t * 1.3 + i + k * 0.3) * k * 0.25, 60 + k, 1, 1, 1); }
+
+  bub.render(c);
+}
+
+function irisSub(tt) {
+  const [px, py] = POOL;
+  const out = { x: px + 40, y: IH + 20 };
+  const p = { x: px, y: py, dir: 0, scale: 1, hidden: false };
+  if (tt < T.approach[1]) { const k = ease(T.approach[0], T.approach[1], tt); p.x = out.x + (px - out.x) * k; p.y = out.y + (py - out.y) * k; p.dir = Math.round(-3 * (1 - k)); }
+  else if (tt < T.enter[0]) { /* hovers while the iris opens */ }
+  else if (tt < T.open2[0]) { const k = ease(T.enter[0], T.enter[1], tt); p.scale = 1 - 0.45 * k; p.hidden = tt > T.enter[1] + 0.1; }
+  else if (tt < T.exit[0] + 0.6) { const k = ease(T.open2[0] + 0.2, T.exit[0] + 0.6, tt); p.scale = 0.55 + 0.45 * k; p.hidden = tt < T.open2[0] + 0.2; p.dir = Math.round(16 * k); }
+  else { const k = ease(T.exit[0] + 0.6, T.exit[1] + 0.6, tt); p.dir = 16; p.x = px + (out.x - px) * k; p.y = py + (out.y - py) * k; }
+  return p;
+}
+
+function bioStep(v, tt, dt) {
+  const st = v.st, [px, py] = POOL;
+  st.dt = dt;
+  st.sub = irisSub(tt);
+  const prevDoor = st.door || 0;
+  st.door = Math.max(ease(T.open[0], T.open[1], tt) - ease(T.close[0], T.close[1], tt), ease(T.open2[0], T.open2[1], tt) - ease(T.close2[0] + 0.6, T.close2[1] + 0.6, tt));
+  st.doorSpeed = Math.min(1, Math.abs(st.door - prevDoor) / Math.max(dt, 1e-3));
+  const moving = st.doorSpeed > 0.05;
+  if (moving && Math.random() < dt * 45) { const a = Math.random() * 6.28; v.bub.burst(px + Math.cos(a) * 16, px + Math.cos(a) * 16 + 1, py + Math.sin(a) * 16, 1, 0.7); }
+  if (tt > T.enter[1] - 0.2 && !v.fired.big) { v.fired.big = 1; v.bub.list.push({ x: px, y: py - 2, vx: 0, vy: -8, r: 3.6, ph: 0, life: 5 }); v.bub.burst(px - 7, px + 7, py, 7, 0.5); }
+  if (tt > T.exit[0] && !v.fired.out) { v.fired.out = 1; v.bub.burst(px - 9, px + 9, py, 12, 0.8); }
+  if (tt < 1) v.fired = {};
+  st.depositing = tt > T.deposit[0] && tt < T.deposit[1];
+  if (st.depositing && Math.random() < dt * 5) st.flow.push({ k: 0, r: Math.floor(Math.random() * 6) });
+  for (const q of st.flow) { q.k += dt * 0.42; if (q.k >= 1) { q.dead = 1; st.bins[q.r] = Math.min(1, st.bins[q.r] + 0.08); } }
+  st.flow = st.flow.filter((q) => !q.dead);
+  if (tt < 0.05) st.bins = [0.45, 0.3, 0.2, 0.35, 0.25, 0.08];
+  v.bub.update(dt);
+}
+
+// ===== more biomechanical / steampunk bases around the iris =====
+function rivetRing(c, cx, cy, r, n, col = 3) { for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; R(c, cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1, 1, col); } }
+function arm(c, x, y, ang, segs, t, ph, col = 2) {
+  for (let s = 0; s < segs.length; s++) {
+    ang += Math.sin(t * 0.9 + ph + s * 1.3) * 0.25;
+    for (let d = 0; d < segs[s]; d++) { x += Math.cos(ang); y += Math.sin(ang); R(c, x, y, 2, 2, 1); R(c, x, y, 1, 1, col); }
+    disc(c, x, y, 2, 2); R(c, x, y, 1, 1, 3);
+  }
+  // claw
+  for (const s of [-0.6, 0.6]) for (let d = 1; d < 4; d++) R(c, x + Math.cos(ang + s) * d, y + Math.sin(ang + s) * d, 1, 1, 3);
+  return [x, y];
+}
+function vat(c, x, y, w, h, level, t, i) {
+  for (let yy = 0; yy < h; yy++) {
+    const inset = yy < 3 ? 3 - yy : yy > h - 4 ? yy - (h - 4) : 0;
+    R(c, x + inset, y + yy, w - inset * 2, 1, 2);
+    if (inset < 2) R(c, x + inset + 2, y + yy, w - inset * 2 - 4, 1, 0);
+  }
+  const lvl = Math.round(level * (h - 8));
+  for (let k = 0; k < lvl; k++) R(c, x + 3, y + h - 4 - k, w - 6, 1, k === lvl - 1 ? 3 : 1);
+  for (let k = 0; k < 2; k++) R(c, x + 4 + k * 5, y + h - 5 - ((t * 9 + k * 7 + i * 3) % Math.max(1, lvl)), 1, 1, 3);
+  R(c, x + 1, y + 4, 1, 1, 4); R(c, x + w - 2, y + 4, 1, 1, 4); R(c, x + 1, y + h - 5, 1, 1, 4); R(c, x + w - 2, y + h - 5, 1, 1, 4);
+}
+
+const VARIANTS = [
+  { n: 2, name: 'Nautile mécanique', tag: 'Coquille spirale, bras articulés',
+    text: "Une immense coquille de nautile riveteuse dont chaque loge est une cuve. La porte iris s'ouvre dans l'ouverture de la coquille. Deux bras articulés à pinces rangent le butin loge par loge, le long de la spirale.",
+    pool: [192, 152],
+    shell: { cx: 140, cy: 104 },
+    draw(c, t, st, bub) {
+      seaFloor(c, 91);
+      const { cx, cy } = this.shell;
+      const rr = (th) => 8 * Math.exp(0.15 * th);
+      const TH = 4 * Math.PI + 0.7;
+      // trailing pipes / anchor chains
+      pipe(c, [[cx - 40, cy + 40], [40, 230], [0, 240]], t, 4);
+      pipe(c, [[cx + 10, cy - 60], [cx + 10, 14], [0, 14]], t, 3, -0.6);
+      // shell body
+      for (let y = -66; y <= 66; y++) for (let x = -66; x <= 66; x++) {
+        const d = Math.hypot(x, y); let th = Math.atan2(y, x); if (th < 0) th += Math.PI * 2;
+        let inside = false; for (let k = 0; k < 3; k++) if (th + k * 2 * Math.PI <= TH && d <= rr(th + k * 2 * Math.PI)) inside = true;
+        if (!inside) continue;
+        R(c, cx + x, cy + y, 1, 1, ((x * 3 + y) & 7) === 0 ? 0 : 1);
+      }
+      // spiral wall with rivets
+      for (let th = 0.4; th <= TH; th += 0.01) { const r0 = rr(th); for (let w = 0; w < 3; w++) R(c, cx + Math.cos(th) * (r0 - w), cy + Math.sin(th) * (r0 - w), 1, 1, w === 0 ? 3 : 2); }
+      for (let th = 1; th <= TH; th += 0.35) R(c, cx + Math.cos(th) * (rr(th) - 4), cy + Math.sin(th) * (rr(th) - 4), 1, 1, 4);
+      // septa: chamber walls; the six outermost chambers are vats
+      const septa = [];
+      for (let th = 1.2; th < TH; th += 0.75) septa.push(th);
+      for (const th of septa) { const r0 = rr(th), r1 = rr(th - 2 * Math.PI) > 4 ? rr(th - 2 * Math.PI) : 3; for (let d = r1; d < r0; d++) R(c, cx + Math.cos(th) * d, cy + Math.sin(th) * d, 1, 1, 2); }
+      const outer = septa.slice(-7);
+      for (let i = 0; i < 6; i++) {
+        const thm = (outer[i] + outer[i + 1]) / 2, rm = (rr(thm) + rr(thm - 2 * Math.PI)) / 2;
+        const x = cx + Math.cos(thm) * rm, y = cy + Math.sin(thm) * rm;
+        const h = Math.round(st.bins[i] * 6);
+        for (let k = 0; k < h; k++) R(c, x - 3, y + 3 - k, 7, 1, k === h - 1 ? 3 : 2);
+        icon(c, ICON_KEYS[i], x - 2, y - 6 - (h > 3 ? 1 : 0));
+        st.chambers = st.chambers || []; st.chambers[i] = [x, y];
+      }
+      // gear cluster and gauge on the shell's back
+      gear(c, cx - 28, cy - 30, 8, 10, t * 0.8); gear(c, cx - 41, cy - 22, 5, 6, -t * 0.8 * 10 / 6);
+      disc(c, cx - 20, cy + 34, 5, 0); ring(c, cx - 20, cy + 34, 5, 3); { const a = Math.PI * 0.8 + (0.5 + 0.4 * Math.sin(t)) * Math.PI * 1.4; for (let d = 0; d < 4; d++) R(c, cx - 20 + Math.cos(a) * d, cy + 34 + Math.sin(a) * d, 1, 1, 4); }
+      // siphon jet with bubbles
+      R(c, cx + 38, cy + 44, 8, 5, 2); R(c, cx + 39, cy + 45, 6, 3, 0);
+      if (Math.random() < 0.15) bub.burst(cx + 44, cx + 46, cy + 46, 1, 0.5);
+      // iris in the shell mouth
+      const [px, py] = this.pool;
+      drawIris(c, px, py, 16, st.door, t);
+      drawSub(c, st.sub);
+      // articulated arms
+      const k = st.depositing ? 1 : 0;
+      arm(c, px - 18, py - 14, -2.4 + k * Math.sin(t * 2) * 0.4, [14, 12, 9], t, 0);
+      arm(c, px + 16, py - 16, -1.2 - k * Math.sin(t * 2 + 1) * 0.4, [12, 10, 8], t, 2);
+      for (const q of st.flow) { const [x, y] = this.path(q, st); icon(c, ICON_KEYS[q.r], x - 2, y - 2); }
+      bub.render(c);
+    },
+    path(q, st) {
+      const [px, py] = this.pool, tgt = (st.chambers || [])[q.r] || [150, 112];
+      const k = q.k, mx = (px + tgt[0]) / 2 + 20, my = Math.min(py, tgt[1]) - 30;
+      const a = (1 - k) * (1 - k), b = 2 * (1 - k) * k, d = k * k;
+      return [a * px + b * mx + d * tgt[0], a * (py - 12) + b * my + d * tgt[1]];
+    },
+  },
+  { n: 3, name: 'Cloche-usine à vapeur', tag: 'Machine à balancier, roue à aubes',
+    text: "Une énorme cloche de plongée rivetée, flanquée de chaudières et de cheminées. Un balancier de machine à vapeur fait battre un piston, et une roue à aubes tourne dans le courant. Une chaîne à godets fait le tour de la cloche et vide le butin dans six trémies.",
+    pool: [160, 112],
+    draw(c, t, st, bub) {
+      seaFloor(c, 103);
+      const cx = 160, cy = 112, R0 = 54;
+      // chain conveyor loop around the bell
+      st.loop = st.loop || beltLoop(92, 196, 228, 196, 10);
+      // boilers
+      for (const [bx, by] of [[44, 70], [244, 70]]) {
+        for (let yy = 0; yy < 50; yy++) { const inset = yy < 5 ? 5 - yy : yy > 44 ? yy - 44 : 0; R(c, bx - 13 + inset, by + yy, 26 - inset * 2, 1, yy % 9 === 0 ? 2 : 1); R(c, bx - 13 + inset, by + yy, 1, 1, 2); R(c, bx + 12 - inset, by + yy, 1, 1, 2); }
+        for (let yy = 4; yy < 46; yy += 9) { R(c, bx - 11, by + yy, 1, 1, 4); R(c, bx + 10, by + yy, 1, 1, 4); }
+        disc(c, bx, by + 22, 5, 0); ring(c, bx, by + 22, 5, 3);
+        const a = Math.PI * 0.8 + (0.6 + 0.35 * Math.sin(t * 1.4 + bx)) * Math.PI * 1.4; for (let d = 0; d < 4; d++) R(c, bx + Math.cos(a) * d, by + 22 + Math.sin(a) * d, 1, 1, 4);
+        // chimney
+        R(c, bx - 3, by - 22, 7, 22, 2); R(c, bx - 2, by - 21, 5, 21, 1); R(c, bx - 5, by - 24, 11, 3, 3);
+        if (Math.random() < 0.12) bub.burst(bx - 2, bx + 2, by - 26, 2, 0.6);
+        pipe(c, [[bx + (bx < cx ? 13 : -13), by + 30], [bx < cx ? cx - R0 + 4 : cx + R0 - 4, by + 30]], t, 3);
+      }
+      // the bell: riveted plate rings
+      disc(c, cx, cy, R0, 1);
+      for (const r of [R0, R0 - 1, R0 - 12, R0 - 26]) ring(c, cx, cy, r, 2);
+      rivetRing(c, cx, cy, R0 - 3, 44, 4); rivetRing(c, cx, cy, R0 - 15, 32, 3); rivetRing(c, cx, cy, R0 - 29, 22, 3);
+      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + 0.2; for (let d = R0 - 26; d < R0; d++) R(c, cx + Math.cos(a) * d, cy + Math.sin(a) * d, 1, 1, 2); }
+      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + 0.6, x = cx + Math.cos(a) * (R0 - 6), y = cy + Math.sin(a) * (R0 - 6); disc(c, x, y, 3, 2); disc(c, x, y, 2, 0); R(c, x, y, 1, 1, Math.floor(t * 1.5 + i) % 3 ? 3 : 4); }
+      // walking beam engine on the bell's shoulder
+      const pv = [cx - 30, cy - 40], rock = Math.sin(t * 1.8) * 0.3;
+      for (let d = -22; d <= 22; d++) R(c, pv[0] + Math.cos(rock) * d, pv[1] + Math.sin(rock) * d, 1, 2, 3);
+      disc(c, pv[0], pv[1], 2, 4);
+      const endX = pv[0] + Math.cos(rock) * 22, endY = pv[1] + Math.sin(rock) * 22;
+      for (let k = 0; k < 10; k++) R(c, endX, endY + k, 1, 1, 4);
+      R(c, endX - 3, endY + 10, 7, 9, 2); R(c, endX - 2, endY + 11, 5, 7, 1);
+      gear(c, pv[0] - 22, pv[1] + 6, 7, 10, t * 1.8);
+      // paddle wheel turning in the current
+      const wx = 240, wy = 150, wa = t * 0.9;
+      ring(c, wx, wy, 14, 2); ring(c, wx, wy, 13, 2); disc(c, wx, wy, 3, 3);
+      for (let i = 0; i < 8; i++) { const a = wa + i * Math.PI / 4; for (let d = 3; d < 18; d++) R(c, wx + Math.cos(a) * d, wy + Math.sin(a) * d, 1, 1, d > 14 ? 3 : 2); }
+      // chain with buckets
+      for (let i = 0; i < 300; i++) { const [x, y] = st.loop(i / 300); R(c, x, y, 1, 1, ((i + Math.floor(t * 40)) % 4) < 2 ? 2 : 1); }
+      for (const p of [[92, 196], [228, 196]]) { disc(c, p[0], p[1], 10, 0); ring(c, p[0], p[1], 10, 2); gear(c, p[0], p[1], 7, 9, t * 2); }
+      // hoppers
+      for (let i = 0; i < 6; i++) {
+        const x = 104 + i * 22, y = 214;
+        for (let k = 0; k < 9; k++) R(c, x - 8 + k, y + k * 0.6, 17 - k * 2, 1, 2);
+        R(c, x - 1, y + 6, 3, 8, 2);
+        const h = Math.round(st.bins[i] * 6); for (let k = 0; k < h; k++) R(c, x - 4 + k * 0.5, y + 4 - k * 0.6, 9 - k, 1, 3);
+        icon(c, ICON_KEYS[i], x - 2, y + 15);
+      }
+      drawIris(c, cx, cy, 18, st.door, t);
+      drawSub(c, st.sub);
+      for (const q of st.flow) { const [x, y] = this.path(q, st); R(c, x - 3, y + 3, 7, 1, 2); icon(c, ICON_KEYS[q.r], x - 2, y - 2); }
+      bub.render(c);
+    },
+    path(q, st) {
+      const k = q.k;
+      if (k < 0.35) { const u = k / 0.35; return [160 + (92 - 160) * u, 128 + (186 - 128) * u]; }
+      const tx = 104 + q.r * 22, u = (k - 0.35) / 0.65;
+      return [92 + (tx - 92) * u, 186 + Math.sin(u * Math.PI) * -6 + u * 22];
+    },
+  },
+  { n: 4, name: 'Squelette de léviathan', tag: 'Os renforcés de métal',
+    text: "La base est bâtie dans le squelette d'une créature géante. Les côtes, cerclées de métal et boulonnées, forment une cage autour de la porte iris. Une colonne vertébrale creuse sert de tuyau, le crâne abrite une grue-mâchoire à l'œil lumineux, et une turbine tourne au bout de la queue. Le butin monte par des poulies jusqu'à six poches pendues aux côtes.",
+    pool: [150, 130],
+    draw(c, t, st, bub) {
+      seaFloor(c, 117);
+      const sp = [], n = 26;
+      for (let i = 0; i < n; i++) { const u = i / (n - 1); sp.push([30 + u * 250, 70 + Math.sin(u * 3.2 + 0.4) * 18 + u * 30]); }
+      // ribs: curved bones from the spine, strapped with metal bands
+      for (let i = 5; i < 19; i += 2) {
+        const [x0, y0] = sp[i];
+        for (const side of [-1, 1]) {
+          for (let s = 0; s < 70; s++) {
+            const u = s / 70;
+            const x = x0 - u * u * 22, y = y0 + side * Math.sin(u * Math.PI / 2) * (side > 0 ? 62 : 40);
+            R(c, x, y, 2, 2, s % 14 === 7 ? 3 : 2);
+            if (s % 14 === 7) { R(c, x - 1, y, 4, 1, 3); R(c, x + 3, y, 1, 1, 4); }
+          }
+        }
+      }
+      // spine: hollow vertebrae, a pipe with pulses inside
+      pipe(c, sp, t, 5);
+      for (let i = 1; i < n - 1; i += 2) { const [x, y] = sp[i]; disc(c, x, y, 4, 2); disc(c, x, y, 2, 1); R(c, x, y, 1, 1, 4); }
+      // skull with jaw crane and glowing eye
+      const [sx, sy] = sp[0];
+      for (let y = -16; y <= 16; y++) for (let x = -22; x <= 12; x++) { const e = (x / (x < 0 ? 22 : 12)) ** 2 + (y / 16) ** 2; if (e <= 1) R(c, sx + x, sy + y, 1, 1, e > 0.82 ? 2 : (((x + y) & 3) === 0 ? 0 : 1)); }
+      disc(c, sx - 6, sy - 5, 3, 0); R(c, sx - 6, sy - 5, 1, 1, Math.sin(t * 2) > 0 ? 4 : 3);
+      const jaw = 0.3 + Math.sin(t * 1.2) * 0.25;
+      for (let d = 0; d < 26; d++) R(c, sx - 18 + Math.cos(Math.PI + jaw) * d, sy + 8 + Math.sin(Math.PI + jaw) * d * -1, 1, 2, d % 5 ? 2 : 3);
+      gear(c, sx + 2, sy + 10, 6, 8, t);
+      // tail turbine
+      const [tx, ty] = sp[n - 1];
+      ring(c, tx, ty, 11, 2); for (let i = 0; i < 5; i++) { const a = t * 4 + i * 1.257; for (let d = 2; d < 10; d++) R(c, tx + Math.cos(a + d * 0.06) * d, ty + Math.sin(a + d * 0.06) * d, 1, 1, d > 7 ? 3 : 2); }
+      disc(c, tx, ty, 2, 4);
+      if (Math.random() < 0.2) bub.burst(tx + 10, tx + 12, ty, 1, 1);
+      // hanging pods (storage) + pulleys
+      st.pods = st.pods || [];
+      for (let i = 0; i < 6; i++) {
+        const [rx, ry] = sp[6 + i * 2], px = rx + 8, py = ry - 34 - (i % 2) * 6;
+        disc(c, rx, ry - 6, 3, 2); R(c, rx, ry - 6, 1, 1, 4); // pulley on the vertebra
+        for (let y = py + 6; y < ry - 8; y++) R(c, px + Math.sin(t + y * 0.2) * 0.6, y, 1, 1, 1);
+        const rr = 5 + Math.round(st.bins[i] * 3);
+        disc(c, px, py, rr, 0); ring(c, px, py, rr, 2); ring(c, px, py, rr - 1, 1, 2);
+        const h = Math.round(st.bins[i] * (rr * 2 - 3)); for (let k = 0; k < h; k++) R(c, px - rr + 3, py + rr - 2 - k, rr * 2 - 5, 1, k === h - 1 ? 3 : 1);
+        icon(c, ICON_KEYS[i], px - 2, py - rr - 7);
+        st.pods[i] = [px, py];
+      }
+      drawIris(c, this.pool[0], this.pool[1], 16, st.door, t);
+      drawSub(c, st.sub);
+      for (const q of st.flow) { const [x, y] = this.path(q, st); icon(c, ICON_KEYS[q.r], x - 2, y - 2); }
+      bub.render(c);
+    },
+    path(q, st) {
+      const [px, py] = this.pool, tgt = (st.pods || [])[q.r] || [150, 60], k = q.k;
+      if (k < 0.5) { const u = k / 0.5; return [px + (tgt[0] - px) * u, py - 10 + (tgt[1] + 40 - py) * u]; }
+      const u = (k - 0.5) / 0.5; return [tgt[0], tgt[1] + 40 - 40 * u];
+    },
+  },
+];
+
+function variantStep(v, tt, dt) {
+  const st = v.st, [px, py] = v.b.pool;
+  st.dt = dt;
+  st.sub = irisSubAt(v.b.pool, tt);
+  const prevDoor = st.door || 0;
+  st.door = Math.max(ease(T.open[0], T.open[1], tt) - ease(T.close[0], T.close[1], tt), ease(T.open2[0], T.open2[1], tt) - ease(T.close2[0] + 0.6, T.close2[1] + 0.6, tt));
+  st.doorSpeed = Math.min(1, Math.abs(st.door - prevDoor) / Math.max(dt, 1e-3));
+  if (st.doorSpeed > 0.05 && Math.random() < dt * 45) { const a = Math.random() * 6.28; v.bub.burst(px + Math.cos(a) * 16, px + Math.cos(a) * 16 + 1, py + Math.sin(a) * 16, 1, 0.7); }
+  if (tt > T.enter[1] - 0.2 && !v.fired.big) { v.fired.big = 1; v.bub.list.push({ x: px, y: py - 2, vx: 0, vy: -8, r: 3.6, ph: 0, life: 5 }); v.bub.burst(px - 7, px + 7, py, 7, 0.5); }
+  if (tt > T.exit[0] && !v.fired.out) { v.fired.out = 1; v.bub.burst(px - 9, px + 9, py, 12, 0.8); }
+  if (tt < 1) v.fired = {};
+  st.depositing = tt > T.deposit[0] && tt < T.deposit[1];
+  if (st.depositing && Math.random() < dt * 5) st.flow.push({ k: 0, r: Math.floor(Math.random() * 6) });
+  for (const q of st.flow) { q.k += dt * 0.45; if (q.k >= 1) { q.dead = 1; st.bins[q.r] = Math.min(1, st.bins[q.r] + 0.08); } }
+  st.flow = st.flow.filter((q) => !q.dead);
+  if (tt < 0.05) st.bins = [0.45, 0.3, 0.2, 0.35, 0.25, 0.08];
+  v.bub.update(dt);
+}
+function irisSubAt(pool, tt) {
+  const [px, py] = pool;
+  const out = { x: px + 40, y: IH + 20 };
+  const p = { x: px, y: py, dir: 0, scale: 1, hidden: false };
+  if (tt < T.approach[1]) { const k = ease(T.approach[0], T.approach[1], tt); p.x = out.x + (px - out.x) * k; p.y = out.y + (py - out.y) * k; p.dir = Math.round(-3 * (1 - k)); }
+  else if (tt < T.enter[0]) { /* hovers */ }
+  else if (tt < T.open2[0]) { const k = ease(T.enter[0], T.enter[1], tt); p.scale = 1 - 0.45 * k; p.hidden = tt > T.enter[1] + 0.1; }
+  else if (tt < T.exit[0] + 0.6) { const k = ease(T.open2[0] + 0.2, T.exit[0] + 0.6, tt); p.scale = 0.55 + 0.45 * k; p.hidden = tt < T.open2[0] + 0.2; p.dir = Math.round(16 * k); }
+  else { const k = ease(T.exit[0] + 0.6, T.exit[1] + 0.6, tt); p.dir = 16; p.x = px + (out.x - px) * k; p.y = py + (out.y - py) * k; }
+  return p;
+}
+
+const ctx = document.getElementById('base').getContext('2d'); ctx.imageSmoothingEnabled = false;
+const grid = document.getElementById('grid');
+const v = { bub: new Bubbles(), st: { sub: {}, door: 0, flow: [], bins: [0.45, 0.3, 0.2, 0.35, 0.25, 0.08] }, fired: {} };
+const vs = VARIANTS.map((b) => {
+  const el = document.createElement('article'); el.className = 'base';
+  el.innerHTML = `<canvas width="${IW}" height="${IH}" aria-label="Base ${b.n} animée : ${b.name}"></canvas><h3>${b.n} · ${b.name}</h3><span class="tag">${b.tag}</span><p>${b.text}</p>`;
+  grid.appendChild(el);
+  const c = el.querySelector('canvas').getContext('2d'); c.imageSmoothingEnabled = false;
+  return { b, ctx: c, bub: new Bubbles(), st: { sub: {}, door: 0, flow: [], bins: [0.45, 0.3, 0.2, 0.35, 0.25, 0.08] }, fired: {} };
+});
+let prev = performance.now(), time = 0;
+function draw() {
+  drawBiomech(ctx, time, v.st, v.bub);
+  for (const w of vs) w.b.draw(w.ctx, time, w.st, w.bub);
+}
+function frame(now) {
+  const dt = Math.min(0.05, (now - prev) / 1000); prev = now; time += dt;
+  bioStep(v, time % T.LOOP, dt);
+  for (const w of vs) variantStep(w, time % T.LOOP, dt);
+  draw();
+  if (!reduce) requestAnimationFrame(frame);
+}
+if (reduce) { for (let k = 0; k < 120; k++) { time = 6 + k / 60; bioStep(v, time, 1 / 60); for (const w of vs) variantStep(w, time, 1 / 60); } draw(); }
+else requestAnimationFrame(frame);
+window.__check = () => [...document.querySelectorAll('canvas')].map((c) => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, s = new Set(); for (let i = 0; i < d.length; i += 4) s.add(d[i] + ',' + d[i + 1] + ',' + d[i + 2] + ',' + d[i + 3]); return [...s]; });
+})();
+</script>

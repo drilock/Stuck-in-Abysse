@@ -1,0 +1,34 @@
+/* Only the 5 palette colours are allowed anywhere. */
+:root {
+  --c0: #101820;
+  --c1: #344B50;
+  --c2: #65A89A;
+  --c3: #B8C98B;
+  --c4: #F2E6C9;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%;
+  height: 100%;
+  background: var(--c0);
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+#stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#game {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  background: var(--c0);
+}

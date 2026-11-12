@@ -1,0 +1,456 @@
+<title>Abyss Invaders Base &amp; Craft</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: same sonar-console look as the concept board. Part 1 = three animated docking bases, part 2 = resource / workshop / recipe chart. */
+:root {
+  --abyss: #0A1628; --rock: #1E4A66; --hull: #2F8FBF; --ore: #7CD3C8; --foam: #E3F2F0;
+  --display: "Silkscreen", "Courier New", monospace;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+body { background: var(--abyss); color: var(--foam); font-family: var(--body); line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 48px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; text-wrap: balance; letter-spacing: 0.02em; }
+h1 { font-size: clamp(28px, 6vw, 46px); line-height: 1.05; }
+h1 span { color: var(--hull); }
+h2 { font-size: 22px; }
+h3 { font-size: 16px; }
+p { margin: 0; max-width: 65ch; }
+.lede { color: var(--ore); }
+section, header { display: flex; flex-direction: column; gap: 16px; }
+.sec-head { display: flex; flex-direction: column; gap: 6px; border-top: 2px solid var(--rock); padding-top: 18px; }
+.eyebrow { font-family: var(--display); font-size: 11px; letter-spacing: 0.12em; color: var(--hull); text-transform: uppercase; }
+canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; max-width: 100%; }
+.bases { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.base { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.base canvas { width: 100%; height: auto; border: 2px solid var(--rock); }
+.tag { font-family: var(--display); font-size: 12px; color: var(--ore); }
+.base p { font-size: 14px; }
+ul.steps { margin: 0; padding-left: 18px; font-size: 14px; display: flex; flex-direction: column; gap: 2px; }
+.res { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.chip { display: flex; gap: 10px; align-items: flex-start; border: 2px solid var(--rock); padding: 10px; min-width: 0; }
+.chip canvas { width: 35px; height: 35px; flex: none; }
+.chip b { font-family: var(--display); font-weight: 400; font-size: 12px; display: block; }
+.chip span { font-size: 13px; color: var(--ore); }
+.tablewrap { overflow-x: auto; border: 2px solid var(--rock); }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rock); vertical-align: top; }
+th { font-family: var(--display); font-weight: 400; font-size: 11px; color: var(--hull); letter-spacing: 0.06em; }
+td:first-child { font-family: var(--display); font-size: 12px; white-space: nowrap; }
+.flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-family: var(--display); font-size: 12px; }
+.flow span { border: 2px solid var(--hull); padding: 4px 8px; }
+.flow i { font-style: normal; color: var(--hull); }
+.inv { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.inv > div { border: 2px solid var(--rock); padding: 14px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+footer { border-top: 2px solid var(--rock); padding-top: 18px; color: var(--ore); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Abyss Invaders · planche base &amp; craft</div>
+    <h1>Une base qui <span>accueille</span> et des ateliers qui <span>fabriquent</span></h1>
+    <p class="lede">Trois idées de base, chacune avec un point de dépôt où l'on voit les ressources arriver et une séquence d'amarrage : la porte s'ouvre, des bulles s'échappent et remontent, puis le bathyscaphe entre. En dessous, une proposition de ressources, d'ateliers et de recettes pour remplacer les achats de niveaux.</p>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Partie 1</div>
+      <h2>Trois bases, trois amarrages</h2>
+      <p>Les bulles ont une petite physique : une poussée vers le haut qui grandit avec leur taille, un frottement de l'eau, une oscillation latérale. Elles grossissent en montant et fusionnent quand elles se touchent.</p>
+    </div>
+    <div class="bases" id="bases"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Partie 2</div>
+      <h2>Ressources</h2>
+      <p>Chaque biome donne sa propre ressource, et les plus rares se trouvent en profondeur. Dans le jeu, les couleurs restent limitées à 5 : c'est la forme de l'icône qui distingue les ressources.</p>
+    </div>
+    <div class="res" id="res"></div>
+    <div class="flow" aria-label="Chaîne de fabrication"><span>Biome</span><i>→</i><span>Ressource brute</span><i>→</i><span>Atelier</span><i>→</i><span>Composant</span><i>→</i><span>Équipement ou module</span></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Partie 3</div>
+      <h2>Ateliers à construire</h2>
+      <p>On ne débloque plus des niveaux. On construit des ateliers à la base, puis chaque atelier ouvre ses recettes. Un atelier se construit avec des ressources et demande parfois un autre atelier avant lui.</p>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Atelier</th><th>Pour le construire</th><th>Il transforme</th><th>Il fabrique</th></tr></thead>
+      <tbody>
+        <tr><td>Raffinerie</td><td>20 cristaux (déjà présente au départ)</td><td>3 cristaux → 1 lingot</td><td>Lingots, la base de presque tout</td></tr>
+        <tr><td>Forge</td><td>10 lingots, 8 ferrailles</td><td>2 ferrailles + 1 lingot → 1 plaque</td><td>Plaques de coque, canons, tourelles de la base</td></tr>
+        <tr><td>Corderie</td><td>6 lingots, 12 fibres de kelp</td><td>3 fibres → 1 câble</td><td>Câbles, filets de soute, hélices tressées</td></tr>
+        <tr><td>Labo bio</td><td>8 lingots, 10 coraux · demande la Corderie</td><td>2 coraux + 1 câble → 1 bio-résine</td><td>Sonar, noyau nova, bouclier de la base, recherche des profondeurs</td></tr>
+        <tr><td>Fonderie thermique</td><td>6 plaques, 8 magmatites · demande la Forge</td><td>2 magmatites + 1 lingot → 1 cellule thermique</td><td>Moteurs puissants, tourelles lourdes, sas haute pression</td></tr>
+        <tr><td>Chantier d'avant-poste</td><td>4 cellules, 4 plaques, 2 nodules · demande Fonderie et Labo</td><td></td><td>Kits d'avant-poste à poser dans un secteur profond</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Partie 4</div>
+      <h2>Recettes d'équipement (exemples)</h2>
+      <p>Chaque équipement se voit toujours sur le bathyscaphe ou sur la base. Les niveaux deviennent des pièces à fabriquer.</p>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Équipement</th><th>Atelier</th><th>Recette</th><th>Effet visible</th></tr></thead>
+      <tbody>
+        <tr><td>Canon harpon</td><td>Forge</td><td>2 plaques, 2 lingots</td><td>Canon au sommet de la sphère</td></tr>
+        <tr><td>Canons de ballast</td><td>Forge</td><td>3 plaques, 1 câble</td><td>Deux canons sur les ballasts</td></tr>
+        <tr><td>Bras-pinces</td><td>Fonderie</td><td>2 cellules, 2 plaques, 2 câbles</td><td>Bras armés à l'avant, minent plus vite</td></tr>
+        <tr><td>Hélice tressée</td><td>Corderie</td><td>3 câbles, 1 lingot</td><td>Hélice plus grande, plus de vitesse</td></tr>
+        <tr><td>Moteur thermique</td><td>Fonderie</td><td>2 cellules, 2 plaques</td><td>Propulseurs sur les ballasts</td></tr>
+        <tr><td>Filets de soute</td><td>Corderie</td><td>4 câbles</td><td>Hublots de soute, +10 places</td></tr>
+        <tr><td>Hublot blindé</td><td>Forge</td><td>3 plaques, 1 bio-résine</td><td>Dôme sur le hublot, +1 PV</td></tr>
+        <tr><td>Sonar</td><td>Labo bio</td><td>2 bio-résines, 1 câble</td><td>Antennes, la carte se dévoile plus loin</td></tr>
+        <tr><td>Noyau nova</td><td>Labo bio</td><td>2 bio-résines, 1 nodule</td><td>Cœur lumineux dans le flotteur</td></tr>
+        <tr><td>Tourelle de base</td><td>Forge</td><td>4 plaques, 2 lingots</td><td>Nouvelle tourelle sur l'anneau</td></tr>
+        <tr><td>Bouclier de base</td><td>Labo bio</td><td>3 bio-résines, 2 cellules</td><td>Pylônes autour de la station</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Partie 5</div>
+      <h2>Inventaire et avant-postes</h2>
+    </div>
+    <div class="inv">
+      <div><h3>Soute du vaisseau</h3><p>Un nombre de places total, partagé entre toutes les ressources. Le HUD affiche les icônes avec leur quantité. Une mort fait perdre la soute, comme aujourd'hui.</p></div>
+      <div><h3>Entrepôt de la base</h3><p>Le stock sans limite de la base, où va tout ce qui est déposé. C'est là que puisent les ateliers. Un écran ENTREPÔT montre la grille des ressources et des composants.</p></div>
+      <div><h3>Avant-postes</h3><p>Un kit d'avant-poste se pose dans un secteur profond. Il offre un point de dépôt avec son propre petit stock, un point de réapparition et une porte directe vers la base. Plus tard, on pourra y ajouter des modules (tourelle, extracteur automatique).</p></div>
+    </div>
+  </section>
+
+  <footer><p>Pour choisir, dis-moi la base (1, 2 ou 3) et ce que tu changerais dans les ressources et les ateliers. J'intègre ensuite le craft étape par étape : d'abord les ressources et l'inventaire, puis les ateliers, puis les avant-postes.</p></footer>
+</div>
+
+<script>
+(() => {
+const PAL = ['#0A1628', '#1E4A66', '#2F8FBF', '#7CD3C8', '#E3F2F0'];
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const BW = 240, BH = 190;
+
+// ---------- the bathyscaphe (same parts as the game, level 0) ----------
+const N = 27, C = 13;
+function ell(cx, cy, rx, ry, c) { const o = []; for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) if (x >= 0 && ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1) o.push([x, y, c]); return o; }
+function range(dx, y0, y1, c) { const o = []; for (let y = y0; y <= y1; y++) o.push([dx, y, c]); return o; }
+const PARTS = [...ell(0, 17, 4.4, 6.5, 1), ...range(0, 11, 23, 2), ...ell(5.4, 17, 1.4, 3, 2), ...ell(0, 9, 4.6, 4.6, 2), ...range(4, 8, 10, 1), ...ell(0, 9, 2, 2, 3), [0, 9, 4], [0, 24, 1], [1, 16, 3], [1, 17, 3]];
+const subGrid = Array.from({ length: N }, () => new Array(N).fill(-1));
+for (const [dx, y, c] of PARTS) { subGrid[y][C - dx] = c; subGrid[y][C + dx] = c; }
+const subCache = new Map();
+function subSprite(dir) {
+  dir = ((dir % 32) + 32) % 32;
+  if (subCache.has(dir)) return subCache.get(dir);
+  const a = dir * Math.PI * 2 / 32, co = Math.cos(a), si = Math.sin(a);
+  const g = Array.from({ length: N }, () => new Array(N).fill(-1));
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const dx = x - C, dy = y - C, sx = Math.round(C + dx * co + dy * si), sy = Math.round(C - dx * si + dy * co);
+    if (sx >= 0 && sy >= 0 && sx < N && sy < N) g[y][x] = subGrid[sy][sx];
+  }
+  const cv = document.createElement('canvas'); cv.width = cv.height = N; const c = cv.getContext('2d');
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    let v = g[y][x];
+    if (v < 0 && ((g[y - 1]?.[x] ?? -1) > 0 || (g[y + 1]?.[x] ?? -1) > 0 || (g[y][x - 1] ?? -1) > 0 || (g[y][x + 1] ?? -1) > 0)) v = 0;
+    if (v >= 0) { c.fillStyle = PAL[v]; c.fillRect(x, y, 1, 1); }
+  }
+  subCache.set(dir, cv); return cv;
+}
+
+// ---------- resource icons (5x5, shape tells them apart) ----------
+const ICONS = {
+  cristal: ['..4..', '.343.', '33333', '.333.', '..3..'],
+  corail: ['2.2.2', '.222.', '..2..', '.2.2.', '..1..'],
+  kelp: ['.3...', '..3..', '.3...', '..3..', '.3...'],
+  ferraille: ['22222', '21112', '21412', '21112', '22222'],
+  magmatite: ['.111.', '13431', '14441', '13431', '.111.'],
+  nodule: ['.444.', '4...4', '4.3.4', '4...4', '.444.'],
+};
+const ICON_KEYS = Object.keys(ICONS);
+function icon(ctx, k, x, y) {
+  const rows = ICONS[k];
+  for (let j = 0; j < 5; j++) for (let i = 0; i < 5; i++) { const ch = rows[j][i]; if (ch !== '.') { ctx.fillStyle = PAL[+ch]; ctx.fillRect(Math.round(x) + i, Math.round(y) + j, 1, 1); } }
+}
+
+// ---------- tiny pixel helpers ----------
+const R = (c, x, y, w, h, col) => { c.fillStyle = PAL[col]; c.fillRect(Math.round(x), Math.round(y), w, h); };
+const ring = (c, cx, cy, r, col, step = 0) => { const n = Math.max(8, Math.floor(r * 6)); for (let i = 0; i < n; i++) { if (step && i % step) continue; const a = i / n * Math.PI * 2; R(c, cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1, 1, col); } };
+const disc = (c, cx, cy, r, col) => { for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) if (x * x + y * y <= r * r) R(c, cx + x, cy + y, 1, 1, col); };
+const frameR = (c, x, y, w, h, col) => { R(c, x, y, w, 1, col); R(c, x, y + h - 1, w, 1, col); R(c, x, y, 1, h, col); R(c, x + w - 1, y, 1, h, col); };
+const ease = (a, b, t) => { const k = Math.min(1, Math.max(0, (t - a) / (b - a))); return k * k * (3 - 2 * k); };
+
+// ---------- bubble physics ----------
+class Bubbles {
+  constructor() { this.list = []; }
+  burst(x0, x1, y, n, spread = 1) {
+    for (let i = 0; i < n; i++) this.list.push({ x: x0 + Math.random() * (x1 - x0), y: y + (Math.random() - 0.5) * 3, vx: (Math.random() - 0.5) * 30 * spread, vy: (Math.random() - 0.5) * 20, r: Math.random() < 0.6 ? 1 : 2, ph: Math.random() * 6, life: 4 + Math.random() * 2 });
+  }
+  update(dt) {
+    for (const b of this.list) {
+      const buoy = 22 + b.r * 14; // bigger bubbles rise faster
+      b.vy -= buoy * dt;
+      b.vx += Math.sin(b.ph + b.life * 7) * 18 * dt; // wobble
+      const drag = Math.pow(0.12, dt);
+      b.vx *= drag; b.vy *= Math.pow(0.35, dt);
+      b.x += b.vx * dt; b.y += b.vy * dt;
+      b.r = Math.min(3.4, b.r + dt * 0.18); // expand as the pressure drops
+      b.life -= dt;
+    }
+    // merge touching bubbles (volume adds up)
+    for (let i = 0; i < this.list.length; i++) for (let j = i + 1; j < this.list.length; j++) {
+      const a = this.list[i], b = this.list[j];
+      if (a.dead || b.dead) continue;
+      if (Math.hypot(a.x - b.x, a.y - b.y) < (a.r + b.r) * 0.7) {
+        a.r = Math.min(4, Math.cbrt(a.r ** 3 + b.r ** 3)); a.x = (a.x + b.x) / 2; a.y = (a.y + b.y) / 2; a.vy = Math.min(a.vy, b.vy); b.dead = true;
+      }
+    }
+    this.list = this.list.filter((b) => !b.dead && b.life > 0 && b.y > -6);
+  }
+  render(c) {
+    for (const b of this.list) {
+      const r = Math.round(b.r);
+      if (r <= 1) { R(c, b.x, b.y - 1, 1, 1, 3); R(c, b.x - 1, b.y, 1, 1, 3); R(c, b.x + 1, b.y, 1, 1, 3); R(c, b.x, b.y + 1, 1, 1, 3); }
+      else { ring(c, b.x, b.y, r, r >= 3 ? 3 : 2); R(c, b.x - r * 0.4, b.y - r * 0.5, 1, 1, 4); }
+    }
+  }
+}
+
+// shared docking timeline (seconds, 12 s loop)
+const T = { approach: [0, 2.6], open: [2.6, 3.4], enter: [3.4, 4.8], close: [4.8, 5.5], deposit: [5.5, 8.2], open2: [8.2, 8.9], exit: [8.9, 10.6], close2: [10.6, 11.3], LOOP: 12 };
+
+function seaFloor(c, seed) {
+  R(c, 0, 0, BW, BH, 0);
+  let s = seed;
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 260; i++) { const x = rnd() * BW, y = rnd() * BH; if (((Math.round(x) + Math.round(y)) & 1) === 0) R(c, x, y, 1, 1, 1); }
+}
+
+// ===== Base 1: dome + sliding-door hangar + silo =====
+const BASES = [
+  { n: 1, name: 'Dôme et hangar à portes coulissantes', tag: 'Classique, lisible',
+    text: "Le dôme central garde ses modules. Au sud, un hangar couvert ferme avec deux portes qui coulissent. Le minerai part du hangar par un tube vitré jusqu'à un silo dont la jauge monte.",
+    steps: ['Le sous-marin se présente devant le hangar', 'Les portes coulissent et un rideau de bulles s’échappe', 'Il entre sous le toit, les portes se referment', 'Les cristaux défilent dans le tube et le silo se remplit'],
+    draw(c, t, st, bub, dt) {
+      seaFloor(c, 7);
+      // dome
+      const cx = 104, cy = 58;
+      disc(c, cx, cy, 30, 1); ring(c, cx, cy, 30, 2); ring(c, cx, cy, 27, 2, 3);
+      for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + t * 0.4; for (let d = 6; d < 26; d++) R(c, cx + Math.cos(a) * d, cy + Math.sin(a) * d, 1, 1, 2); }
+      disc(c, cx, cy, 5, 2); R(c, cx - 1, cy - 1, 3, 3, Math.floor(t * 2) % 2 ? 4 : 3);
+      // corridor + hangar
+      R(c, cx - 6, cy + 30, 12, 8, 2); R(c, cx - 4, cy + 30, 8, 8, 1);
+      const hx = cx - 24, hy = cy + 38, hw = 48, hh = 52;
+      R(c, hx, hy, hw, hh, 2); R(c, hx + 2, hy + 2, hw - 4, hh - 2, 1);
+      // sub inside / outside
+      const p = st.sub;
+      c.drawImage(subSprite(p.dir), Math.round(p.x - 13), Math.round(p.y - 13));
+      // roof over the hangar (hides the sub once inside), with skylights
+      R(c, hx + 2, hy + 2, hw - 4, 34, 1);
+      for (let x = hx + 6; x < hx + hw - 6; x += 6) R(c, x, hy + 6, 3, 26, 0);
+      for (let x = hx + 6; x < hx + hw - 6; x += 6) R(c, x, hy + 6 + ((Math.floor(t * 3) + x) % 26), 3, 1, 2);
+      frameR(c, hx, hy, hw, hh, 2);
+      // sliding doors at the bottom edge
+      const open = st.door;
+      const half = (hw - 4) / 2;
+      const slide = Math.round(half * open);
+      R(c, hx + 2 - 0, hy + hh - 3, half - slide, 3, 3); R(c, hx + 2 + half + slide, hy + hh - 3, half - slide, 3, 3);
+      R(c, hx, hy + hh - 4, 2, 5, 2); R(c, hx + hw - 2, hy + hh - 4, 2, 5, 2);
+      if (open < 0.05) R(c, hx + 2 + half, hy + hh - 3, 1, 3, 4);
+      // tube to the silo + silo with a gauge
+      const sx = 170, sy = 92, sw = 26, sh = 54;
+      for (let x = hx + hw; x < sx; x++) { R(c, x, hy + 20, 1, 1, 2); R(c, x, hy + 26, 1, 1, 2); }
+      for (const q of st.flow) icon(c, q.k, q.x - 2, hy + 21);
+      R(c, sx, sy, sw, sh, 2); R(c, sx + 2, sy + 2, sw - 4, sh - 4, 0);
+      const fill = Math.round((sh - 6) * st.level);
+      for (let y = 0; y < fill; y++) R(c, sx + 3, sy + sh - 3 - y, sw - 6, 1, y % 4 === 0 ? 4 : 3);
+      for (let y = sy + 6; y < sy + sh; y += 8) R(c, sx + sw, y, 2, 1, 2);
+      bub.render(c);
+    },
+  },
+  { n: 2, name: 'Plateforme à puits iris', tag: 'Spectaculaire, entrepôt visible',
+    text: "Une plateforme carrée percée d'un puits rond. Un iris à six lames s'ouvre comme un diaphragme et le bathyscaphe plonge dedans. Le butin remonte sur des tapis vers six bacs, un par ressource : on voit l'inventaire de la base.",
+    steps: ['Le sous-marin se place au-dessus du puits', 'L’iris tourne et s’ouvre en libérant une grosse bulle', 'Il descend dans le puits et l’iris se referme', 'Chaque ressource rejoint son bac, dont la pile monte'],
+    draw(c, t, st, bub) {
+      seaFloor(c, 11);
+      const px = 30, py = 14, pw = 180, ph = 140;
+      R(c, px, py, pw, ph, 2); R(c, px + 2, py + 2, pw - 4, ph - 4, 1);
+      for (let x = px + 8; x < px + pw - 4; x += 12) for (let y = py + 8; y < py + ph - 4; y += 12) R(c, x, y, 1, 1, 0);
+      // bins (one per resource)
+      for (let i = 0; i < 6; i++) {
+        const bx = px + 10 + i * 28, by = py + 8;
+        R(c, bx, by, 22, 30, 2); R(c, bx + 1, by + 1, 20, 28, 0);
+        const h = Math.round(st.bins[i] * 20);
+        for (let y = 0; y < h; y++) R(c, bx + 3, by + 27 - y, 16, 1, y % 3 === 0 ? 2 : 1);
+        icon(c, ICON_KEYS[i], bx + 8, by + 27 - h - 6);
+        // conveyor from the pool
+        for (let y = by + 31; y < py + 90; y += 3) R(c, bx + 10, y + (Math.floor(t * 8) % 3), 1, 1, 2);
+      }
+      for (const q of st.flow) icon(c, ICON_KEYS[q.k], px + 10 + q.k * 28 + 8, q.y);
+      // moon pool + iris
+      const cx = 120, cy = 112, r = 18;
+      disc(c, cx, cy, r + 3, 2); disc(c, cx, cy, r, 0);
+      ring(c, cx, cy, r - 3 + Math.sin(t * 3), 1, 2);
+      const p = st.sub;
+      if (st.subVisible) c.drawImage(subSprite(p.dir), Math.round(p.x - 13), Math.round(p.y - 13));
+      // six blades: each blade is a wedge that pulls back towards the rim as the iris opens
+      const open = st.door, rot = open * 0.9;
+      for (let i = 0; i < 6; i++) {
+        const a0 = i * Math.PI / 3 + rot;
+        for (let d = Math.round(r * open); d <= r; d++) {
+          for (let k = 0; k <= 10; k++) {
+            const a = a0 + (k / 10) * (Math.PI / 3 + 0.12);
+            R(c, cx + Math.cos(a) * d, cy + Math.sin(a) * d, 1, 1, k === 0 ? 3 : (i % 2 ? 2 : 1));
+          }
+        }
+      }
+      ring(c, cx, cy, r + 2, 3, 3);
+      bub.render(c);
+    },
+  },
+  { n: 3, name: 'Quai à alvéoles et grue', tag: 'Modulaire, extensible',
+    text: "Une longue jetée avec trois alvéoles fermées par des portes levantes. Des pinces calent le sous-marin, puis une grue sort les caisses et les empile sur l'aire de dépôt. Les futurs ateliers se branchent au bout du quai.",
+    steps: ['Le sous-marin s’aligne sur l’alvéole libre', 'La porte se lève par lames et l’eau bouillonne', 'Il entre, les pinces se ferment sur les ballasts', 'La grue va et vient et les caisses s’empilent par type'],
+    draw(c, t, st, bub) {
+      seaFloor(c, 23);
+      // pier
+      const qy = 30;
+      R(c, 10, qy, 220, 26, 2); R(c, 12, qy + 2, 216, 22, 1);
+      for (let x = 14; x < 228; x += 8) R(c, x, qy + 12, 4, 1, 0);
+      // workshop sockets at both ends
+      for (const wx of [14, 206]) { R(c, wx, qy - 18, 20, 18, 2); R(c, wx + 2, qy - 16, 16, 14, 0); R(c, wx + 8, qy - 12, 4, 4, Math.floor(t * 2) % 2 ? 3 : 1); }
+      // deposit pad: stacked crates by type
+      const dx = 150, dy = qy + 2;
+      frameR(c, dx, dy, 52, 22, 3);
+      for (let i = 0; i < 6; i++) { const n = st.stacks[i]; for (let k = 0; k < n; k++) icon(c, ICON_KEYS[i], dx + 3 + (i % 3) * 16 + (k % 2) * 6, dy + 3 + Math.floor(i / 3) * 10 - Math.floor(k / 2) * 0); }
+      // berths
+      const berths = [60, 120, 180];
+      for (const bx of berths) { R(c, bx - 17, qy + 26, 2, 70, 2); R(c, bx + 15, qy + 26, 2, 70, 2); }
+      const p = st.sub;
+      c.drawImage(subSprite(p.dir), Math.round(p.x - 13), Math.round(p.y - 13));
+      // clamps
+      const cl = st.clamp;
+      for (const s of [-1, 1]) R(c, 120 + s * (15 - Math.round(cl * 5)) - (s < 0 ? 0 : 3), qy + 52, 4, 3, cl > 0.9 ? 4 : 3);
+      // lifting gate: lamellas disappear one by one
+      for (const bx of berths) {
+        const open = bx === 120 ? st.door : 0;
+        const lam = 5 - Math.round(open * 5);
+        for (let i = 0; i < lam; i++) R(c, bx - 15, qy + 92 - i * 2, 30, 1, i % 2 ? 2 : 3);
+      }
+      // crane
+      const cx = st.crane;
+      R(c, 40, qy + 6, 170, 1, 3);
+      R(c, cx - 4, qy + 3, 9, 7, 2); R(c, cx, qy + 10, 1, st.hook, 3);
+      if (st.carry >= 0) icon(c, ICON_KEYS[st.carry], cx - 2, qy + 10 + st.hook);
+      bub.render(c);
+    },
+  },
+];
+
+// ---------- per-base animation state ----------
+function subPath(n, tt) {
+  // returns {x, y, dir} for the bathyscaphe along the docking timeline
+  const tgt = [{ x: 104, y: 120 }, { x: 120, y: 112 }, { x: 120, y: 84 }][n];
+  const out = { x: tgt.x, y: tgt.y + 120 };
+  const door = [{ y: 148 }, { y: 112 }, { y: 120 }][n];
+  let x, y, dir = 0;
+  if (tt < T.approach[1]) { const k = ease(T.approach[0], T.approach[1], tt); x = out.x + Math.sin((1 - k) * 2) * 30 * (1 - k); y = out.y + (door.y + 14 - out.y) * k; dir = Math.round(-Math.cos((1 - k) * 2) * 3 * (1 - k)); }
+  else if (tt < T.enter[0]) { x = tgt.x; y = door.y + 14; }
+  else if (tt < T.exit[0]) { const k = ease(T.enter[0], T.enter[1], tt); x = tgt.x; y = door.y + 14 + (tgt.y - door.y - 14) * k; }
+  else { const k = ease(T.exit[0], T.exit[1], tt); x = tgt.x + k * k * 40; y = tgt.y + (out.y - tgt.y) * k; dir = 16 - Math.round(k * 4); }
+  return { x, y, dir };
+}
+
+const basesEl = document.getElementById('bases');
+const views = BASES.map((b, i) => {
+  const el = document.createElement('article'); el.className = 'base';
+  el.innerHTML = `<canvas width="${BW}" height="${BH}" aria-label="Animation d'amarrage : ${b.name}"></canvas>
+    <h3>${b.n} · ${b.name}</h3><span class="tag">${b.tag}</span><p>${b.text}</p>
+    <ul class="steps">${b.steps.map((s) => `<li>${s}</li>`).join('')}</ul>`;
+  basesEl.appendChild(el);
+  const ctx = el.querySelector('canvas').getContext('2d'); ctx.imageSmoothingEnabled = false;
+  return { b, i, ctx, bub: new Bubbles(), st: { sub: {}, door: 0, level: 0.2, flow: [], bins: [0.3, 0.2, 0.1, 0.25, 0.15, 0.05], stacks: [1, 1, 0, 1, 0, 0], clamp: 0, crane: 120, hook: 2, carry: -1, subVisible: true }, last: 0, fired: {} };
+});
+
+function step(v, tt, dt) {
+  const st = v.st, n = v.i;
+  st.sub = subPath(n, tt);
+  const doorOpen = Math.max(ease(T.open[0], T.open[1], tt) - ease(T.close[0], T.close[1], tt), ease(T.open2[0], T.open2[1], tt) - ease(T.close2[0], T.close2[1], tt));
+  // bubbles burst while a door is moving
+  const moving = (tt > T.open[0] && tt < T.open[1]) || (tt > T.close[0] && tt < T.close[1]) || (tt > T.open2[0] && tt < T.open2[1]) || (tt > T.close2[0] && tt < T.close2[1]);
+  if (moving && Math.random() < dt * 30) {
+    if (n === 0) v.bub.burst(80, 128, 148, 2);
+    if (n === 1) { const a = Math.random() * 6.28; v.bub.burst(120 + Math.cos(a) * 18, 121 + Math.cos(a) * 18, 112 + Math.sin(a) * 18, 1, 0.6); }
+    if (n === 2) v.bub.burst(105, 135, 120, 2);
+  }
+  if (n === 1 && tt > T.enter[0] && tt < T.enter[0] + 0.05 && !v.fired.big) { v.fired.big = 1; v.bub.list.push({ x: 120, y: 108, vx: 0, vy: -10, r: 3.5, ph: 0, life: 5 }); }
+  if (tt < 1) v.fired = {};
+  st.door = doorOpen;
+  st.subVisible = !(n === 1 && tt > T.enter[1] && tt < T.exit[0]);
+  if (n === 2) st.clamp = ease(T.enter[1] - 0.2, T.enter[1] + 0.3, tt) - ease(T.open2[0] - 0.4, T.open2[0], tt);
+  // deposit phase
+  const dep = tt > T.deposit[0] && tt < T.deposit[1];
+  if (n === 0) {
+    if (dep && Math.random() < dt * 9) st.flow.push({ x: 128, k: ICON_KEYS[Math.floor(Math.random() * 6)] });
+    for (const q of st.flow) { q.x += 40 * dt; if (q.x > 168) { q.dead = 1; st.level = Math.min(1, st.level + 0.02); } }
+    st.flow = st.flow.filter((q) => !q.dead);
+    if (tt < 0.05) st.level = 0.2;
+  }
+  if (n === 1) {
+    if (dep && Math.random() < dt * 8) st.flow.push({ k: Math.floor(Math.random() * 6), y: 100 });
+    for (const q of st.flow) { q.y -= 30 * dt; if (q.y < 48) { q.dead = 1; st.bins[q.k] = Math.min(1, st.bins[q.k] + 0.06); } }
+    st.flow = st.flow.filter((q) => !q.dead);
+    if (tt < 0.05) st.bins = [0.3, 0.2, 0.1, 0.25, 0.15, 0.05];
+  }
+  if (n === 2) {
+    if (dep) {
+      const k = ((tt - T.deposit[0]) / 0.9) % 1; // one crate every 0.9 s
+      const go = k < 0.5;
+      st.crane = go ? 120 + (176 - 120) * ease(0, 0.5, k) : 176 - (176 - 120) * ease(0.5, 1, k);
+      st.hook = 2 + Math.round(Math.sin(k * Math.PI * 2) ** 2 * 3);
+      const idx = Math.floor((tt - T.deposit[0]) / 0.9);
+      st.carry = go ? idx % 6 : -1;
+      if (!go && st.lastIdx !== idx) { st.lastIdx = idx; st.stacks[idx % 6] = Math.min(2, st.stacks[idx % 6] + 1); }
+    } else { st.carry = -1; st.crane += (120 - st.crane) * Math.min(1, dt * 3); }
+    if (tt < 0.05) { st.stacks = [1, 1, 0, 1, 0, 0]; st.lastIdx = -1; }
+  }
+  v.bub.update(dt);
+}
+
+let prev = performance.now(), time = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - prev) / 1000); prev = now; time += dt;
+  for (const v of views) {
+    const tt = (time + v.i * 0.0) % T.LOOP;
+    step(v, tt, dt);
+    v.b.draw(v.ctx, time, v.st, v.bub, dt);
+  }
+  if (!reduce) requestAnimationFrame(frame);
+}
+if (reduce) { for (let k = 0; k < 120; k++) { time = 6 + k / 60; for (const v of views) step(v, time, 1 / 60); } for (const v of views) v.b.draw(v.ctx, time, v.st, v.bub, 0); }
+else requestAnimationFrame(frame);
+
+// ---------- resource cards ----------
+const RES = [
+  ['cristal', 'Cristal', 'Partout · le minerai de base'],
+  ['corail', 'Corail', 'Récif · se cueille au laser'],
+  ['kelp', 'Fibre de kelp', 'Forêt de kelp · on coupe les tiges'],
+  ['ferraille', 'Ferraille', 'Épaves · dans les caisses et les coques'],
+  ['magmatite', 'Magmatite', 'Fosses · rochers près des cheminées'],
+  ['nodule', 'Nodule abyssal', 'Rare · profondeur 3 et plus, boss'],
+];
+const resEl = document.getElementById('res');
+for (const [k, name, where] of RES) {
+  const d = document.createElement('div'); d.className = 'chip';
+  d.innerHTML = `<canvas width="7" height="7"></canvas><div><b>${name}</b><span>${where}</span></div>`;
+  resEl.appendChild(d);
+  const c = d.querySelector('canvas').getContext('2d'); R(c, 0, 0, 7, 7, 0); icon(c, k, 1, 1);
+}
+window.__check = () => [...document.querySelectorAll('canvas')].map((c) => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, s = new Set(); for (let i = 0; i < d.length; i += 4) s.add(d[i] + ',' + d[i + 1] + ',' + d[i + 2] + ',' + d[i + 3]); return [...s]; });
+})();
+</script>
